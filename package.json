@@ -1,0 +1,54 @@
+{
+  "name": "video-editor-app",
+  "version": "1.0.1",
+  "description": "Desktop multi-clip video editor for combining and exporting videos as one file.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "smoke": "node scripts/smoke.js",
+    "pack:win": "electron-builder --win portable"
+  },
+  "keywords": [
+    "electron",
+    "video-editor",
+    "ffmpeg"
+  ],
+  "author": "OpenAI Codex",
+  "license": "ISC",
+  "build": {
+    "appId": "com.openai.cutlinestudio",
+    "productName": "Cutline Studio",
+    "asar": false,
+    "compression": "store",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**/*",
+      "src/**/*",
+      "package.json"
+    ],
+    "win": {
+      "signAndEditExecutable": false,
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "${productName}-${version}-portable.${ext}"
+    }
+  },
+  "dependencies": {
+    "ffmpeg-static": "^5.3.0",
+    "ffprobe-static": "^3.1.0"
+  },
+  "devDependencies": {
+    "electron": "^41.2.1",
+    "electron-builder": "^26.8.1"
+  }
+}

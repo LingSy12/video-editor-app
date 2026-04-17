@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cutline Studio</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Desktop Video Editor</p>
+          <h1>Cutline Studio</h1>
+        </div>
+        <div class="topbar-actions">
+          <button id="importButton" class="button button-primary">Import Videos</button>
+          <button id="appendButton" class="button">Add Selected To Sequence</button>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <section class="panel media-panel">
+          <div class="panel-header">
+            <div>
+              <p class="panel-kicker">Project</p>
+              <h2>Media Bin</h2>
+            </div>
+            <span id="libraryCount" class="pill">0 clips</span>
+          </div>
+          <div id="libraryList" class="library-list empty-state">
+            Import a few source videos to begin building the sequence.
+          </div>
+        </section>
+
+        <section class="panel preview-panel">
+          <div class="panel-header">
+            <div>
+              <p class="panel-kicker">Program Monitor</p>
+              <h2 id="previewTitle">No clip selected</h2>
+            </div>
+            <span id="previewMeta" class="pill subtle">Ready</span>
+          </div>
+          <div class="preview-stage">
+            <video id="previewPlayer" controls preload="metadata"></video>
+            <div class="preview-overlay">
+              <div class="preview-chip">Premiere-style MVP</div>
+              <div class="preview-chip" id="sequenceDurationChip">Timeline 00:00</div>
+            </div>
+          </div>
+          <div id="previewHint" class="preview-hint">
+            Select a clip in the media bin or sequence to preview it here.
+          </div>
+        </section>
+
+        <aside class="panel inspector-panel">
+          <div class="panel-header">
+            <div>
+              <p class="panel-kicker">Inspector</p>
+              <h2>Clip & Export</h2>
+            </div>
+          </div>
+
+          <div class="inspector-group">
+            <h3>Selected Clip</h3>
+            <div id="inspectorEmpty" class="mini-empty">
+              Pick a sequence clip to edit trim points.
+            </div>
+            <div id="clipInspector" class="stack hidden">
+              <label class="field">
+                <span>Clip Name</span>
+                <input id="clipName" type="text" readonly />
+              </label>
+              <label class="field">
+                <span>Trim Start (sec)</span>
+                <input id="trimStart" type="number" min="0" step="0.1" />
+              </label>
+              <label class="field">
+                <span>Trim End (sec)</span>
+                <input id="trimEnd" type="number" min="0" step="0.1" />
+              </label>
+              <div class="metrics-row">
+                <div class="metric-card">
+                  <span>Source Duration</span>
+                  <strong id="sourceDuration">0.0s</strong>
+                </div>
+                <div class="metric-card">
+                  <span>Clip Output</span>
+                  <strong id="clipOutputDuration">0.0s</strong>
+                </div>
+              </div>
+              <div class="button-row">
+                <button id="moveClipUp" class="button">Move Up</button>
+                <button id="moveClipDown" class="button">Move Down</button>
+                <button id="removeClip" class="button button-danger">Remove</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="inspector-group export-group">
+            <h3>Export Settings</h3>
+            <div class="stack">
+              <label class="field">
+                <span>Resolution Preset</span>
+                <select id="resolutionPreset">
+                  <option value="1920x1080">1920 x 1080</option>
+                  <option value="1280x720">1280 x 720</option>
+                  <option value="3840x2160">3840 x 2160</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>FPS</span>
+                <input id="fps" type="number" min="12" max="60" step="1" value="30" />
+              </label>
+              <label class="field">
+                <span>Quality (CRF)</span>
+                <input id="crf" type="number" min="12" max="35" step="1" value="20" />
+              </label>
+              <label class="field">
+                <span>Speed Preset</span>
+                <select id="videoPreset">
+                  <option value="veryfast">veryfast</option>
+                  <option value="fast">fast</option>
+                  <option value="medium" selected>medium</option>
+                  <option value="slow">slow</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Output File</span>
+                <div class="path-picker">
+                  <input id="outputPath" type="text" readonly placeholder="Choose an export destination" />
+                  <button id="browseOutput" class="button">Browse</button>
+                </div>
+              </label>
+              <button id="exportButton" class="button button-primary button-wide">
+                Export Timeline To MP4
+              </button>
+              <div class="progress-block">
+                <div class="progress-track">
+                  <div id="progressBar" class="progress-fill"></div>
+                </div>
+                <div class="progress-copy">
+                  <strong id="progressLabel">Idle</strong>
+                  <span id="statusText">Waiting for clips.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <section class="panel sequence-panel">
+          <div class="panel-header">
+            <div>
+              <p class="panel-kicker">Timeline</p>
+              <h2>Sequence</h2>
+            </div>
+            <div class="sequence-actions">
+              <span id="sequenceCount" class="pill">0 clips</span>
+              <span id="sequenceRuntime" class="pill accent">00:00 total</span>
+            </div>
+          </div>
+          <div id="sequenceList" class="sequence-list empty-state">
+            Add clips from the media bin and arrange them in order.
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="./renderer.js"></script>
+  </body>
+</html>
