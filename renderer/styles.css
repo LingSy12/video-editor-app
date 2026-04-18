@@ -76,15 +76,21 @@ body {
 .button-row,
 .metrics-row,
 .sequence-actions,
-.path-picker {
+.path-picker,
+.transport-row,
+.monitor-metadata {
   display: flex;
   gap: 10px;
 }
 
+.wrap-row {
+  flex-wrap: wrap;
+}
+
 .workspace {
   display: grid;
-  grid-template-columns: 300px minmax(500px, 1fr) 360px;
-  grid-template-rows: minmax(380px, 1fr) minmax(260px, 0.92fr);
+  grid-template-columns: 300px minmax(500px, 1fr) 380px;
+  grid-template-rows: minmax(420px, 1fr) minmax(260px, 0.92fr);
   gap: var(--grid-gap);
   height: calc(100vh - 124px);
 }
@@ -229,6 +235,8 @@ body {
     transform 140ms ease,
     border-color 140ms ease,
     background 140ms ease;
+  text-align: left;
+  cursor: pointer;
 }
 
 .library-item:hover,
@@ -319,6 +327,34 @@ body {
   backdrop-filter: blur(8px);
 }
 
+.monitor-controls {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.transport-row {
+  flex-wrap: wrap;
+}
+
+.scrub-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.timeline-scrubber {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.timecode {
+  font-family: "Cascadia Mono", "Consolas", monospace;
+  font-size: 0.92rem;
+  color: var(--text-main);
+}
+
 .preview-hint {
   margin-top: 14px;
   color: var(--text-soft);
@@ -373,6 +409,7 @@ body {
   border-radius: var(--radius-md);
   background: rgba(7, 16, 24, 0.76);
   border: 1px solid rgba(255, 255, 255, 0.06);
+  min-width: 0;
 }
 
 .metric-card span {
@@ -383,7 +420,18 @@ body {
 }
 
 .metric-card strong {
+  display: block;
   font-size: 1.05rem;
+  overflow-wrap: anywhere;
+}
+
+.export-footnote {
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: rgba(90, 210, 255, 0.08);
+  color: var(--text-soft);
+  font-size: 0.84rem;
+  border: 1px solid rgba(90, 210, 255, 0.12);
 }
 
 .progress-block {
@@ -426,6 +474,12 @@ body {
   margin-left: 14px;
 }
 
+@media (max-width: 1440px) {
+  .workspace {
+    grid-template-columns: 280px minmax(400px, 1fr) 340px;
+  }
+}
+
 @media (max-width: 1320px) {
   body {
     overflow: auto;
@@ -444,5 +498,29 @@ body {
     grid-column: auto;
     grid-row: auto;
     min-height: 320px;
+  }
+}
+
+@media (max-width: 760px) {
+  .app-shell {
+    padding: 12px;
+  }
+
+  .topbar,
+  .panel {
+    padding: 14px;
+  }
+
+  .topbar,
+  .panel-header,
+  .progress-copy,
+  .metrics-row,
+  .path-picker,
+  .topbar-actions {
+    flex-direction: column;
+  }
+
+  .scrub-row {
+    grid-template-columns: 1fr;
   }
 }
