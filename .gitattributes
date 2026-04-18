@@ -1,0 +1,5 @@
+dist/** filter=lfs diff=lfs merge=lfs -text
+node_modules/electron/dist/** filter=lfs diff=lfs merge=lfs -text
+node_modules/ffprobe-static/bin/** filter=lfs diff=lfs merge=lfs -text
+node_modules/ffmpeg-static/** filter=lfs diff=lfs merge=lfs -text
+node_modules/app-builder-bin/** filter=lfs diff=lfs merge=lfs -text
