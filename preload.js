@@ -14,6 +14,12 @@ contextBridge.exposeInMainWorld("editorAPI", {
   preparePreview(filePath) {
     return ipcRenderer.invoke("media:prepare-preview", filePath);
   },
+  getRenderCapabilities() {
+    return ipcRenderer.invoke("export:capabilities");
+  },
+  estimateExport(payload) {
+    return ipcRenderer.invoke("export:estimate", payload);
+  },
   exportProject(payload) {
     return ipcRenderer.invoke("project:export", payload);
   },

@@ -28,6 +28,7 @@ const plan = buildExportPlan(clips, {
   fps: 30,
   crf: 21,
   videoPreset: "fast",
+  videoEncoder: "libx264",
 });
 
 if (plan.clips.length !== 2) {
@@ -40,6 +41,22 @@ if (!plan.args.includes("-filter_complex")) {
 
 if (!plan.args.join(" ").includes("anullsrc")) {
   throw new Error("Expected silent clips to receive generated audio.");
+}
+
+if (!Number.isFinite(plan.estimatedFileSizeBytes) || plan.estimatedFileSizeBytes <= 0) {
+  throw new Error("Expected estimated output size to be calculated.");
+}
+
+const bitratePlan = buildExportPlan(clips, {
+  width: 1920,
+  height: 1080,
+  fps: 30,
+  videoBitrate: "20000k",
+  videoEncoder: "libx264",
+});
+
+if (!bitratePlan.args.includes("-b:v")) {
+  throw new Error("Expected manual bitrate export arguments to be generated.");
 }
 
 console.log("Smoke test passed.");
