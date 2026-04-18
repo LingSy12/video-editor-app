@@ -18,10 +18,11 @@
   "build": {
     "appId": "com.openai.cutlinestudio",
     "productName": "Cutline Studio",
+    "afterAllArtifactBuild": "./scripts/cleanup-win-unpacked.js",
     "asar": false,
     "compression": "store",
     "directories": {
-      "output": "dist"
+      "output": "dist/${version}"
     },
     "files": [
       "main.js",

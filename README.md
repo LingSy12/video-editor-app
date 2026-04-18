@@ -27,7 +27,11 @@ npm start
 npm run pack:win
 ```
 
-The portable Windows executable is written to `dist/Cutline Studio-<version>-portable.exe`.
+The portable Windows executable is written to `dist/<version>/Cutline Studio-<version>-portable.exe`.
+
+Each packaged version is kept in its own folder under `dist/<version>/`, so builds like
+`Cutline Studio-1.0.0-portable.exe` and `Cutline Studio-1.0.1-portable.exe` can coexist.
+The intermediate `win-unpacked` folder is removed automatically after packaging finishes.
 
 ## Features
 
