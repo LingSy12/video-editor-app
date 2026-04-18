@@ -3,10 +3,12 @@ const { app, BrowserWindow, dialog, ipcMain } = require("electron");
 const ffmpegPath = require("ffmpeg-static");
 const ffprobePath = require("ffprobe-static").path;
 const {
+  getRenderCapabilities,
   probeMedia,
   runExport,
   normalizeExportSettings,
   preparePreviewMedia,
+  summarizeExportSettings,
 } = require("./src/exporter");
 
 const VIDEO_FILTERS = [
@@ -17,6 +19,10 @@ const VIDEO_FILTERS = [
 ];
 
 let mainWindow;
+
+app.commandLine.appendSwitch("force_high_performance_gpu");
+app.commandLine.appendSwitch("ignore-gpu-blocklist");
+app.commandLine.appendSwitch("enable-gpu-rasterization");
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -90,6 +96,19 @@ ipcMain.handle("media:prepare-preview", async (_event, filePath) => {
     inputPath: filePath,
     ffmpegPath,
     cacheDir: path.join(app.getPath("userData"), "preview-cache"),
+  });
+});
+
+ipcMain.handle("export:capabilities", async () => {
+  return getRenderCapabilities(ffmpegPath);
+});
+
+ipcMain.handle("export:estimate", async (_event, payload) => {
+  const settings = normalizeExportSettings(payload?.settings || {});
+  return summarizeExportSettings({
+    clips: payload?.clips || [],
+    settings,
+    ffmpegPath,
   });
 });
 
