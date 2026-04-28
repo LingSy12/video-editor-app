@@ -75,6 +75,7 @@ body {
 .topbar-actions,
 .button-row,
 .metrics-row,
+.split-fields,
 .sequence-actions,
 .path-picker,
 .transport-row,
@@ -403,6 +404,10 @@ body {
   font: inherit;
 }
 
+.split-field {
+  flex: 1;
+}
+
 .metric-card {
   flex: 1;
   padding: 12px;
@@ -432,6 +437,11 @@ body {
   color: var(--text-soft);
   font-size: 0.84rem;
   border: 1px solid rgba(90, 210, 255, 0.12);
+}
+
+.subtle-note {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 .progress-block {

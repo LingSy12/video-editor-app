@@ -6,7 +6,8 @@ Cutline Studio is a Windows desktop MVP for combining multiple source videos int
 - Sequence timeline list with ordering controls
 - Millisecond trim and split-at-playhead editing
 - Timeline scrub preview with proxy playback
-- MP4 export with FFmpeg, GPU-preferred rendering, and bitrate presets
+- MP4 export with FFmpeg, GPU-preferred rendering, CUDA-assisted scaling when available, and bitrate presets
+- Output aspect presets including 16:9, 4:3, 2.35:1, 9:16, 3:4, 5.8-inch style, and 1:1
 
 ## Requirements
 
@@ -30,7 +31,7 @@ npm run pack:win
 The portable Windows executable is written to `dist/<version>/Cutline Studio-<version>-portable.exe`.
 
 Each packaged version is kept in its own folder under `dist/<version>/`, so builds like
-`Cutline Studio-1.0.0-portable.exe` and `Cutline Studio-1.0.1-portable.exe` can coexist.
+`Cutline Studio-1.0.1-portable.exe` and `Cutline Studio-1.0.2-portable.exe` can coexist.
 The intermediate `win-unpacked` folder is removed automatically after packaging finishes.
 
 ## Features
@@ -43,6 +44,7 @@ The intermediate `win-unpacked` folder is removed automatically after packaging 
 - Split the selected sequence clip at the current playhead
 - Scrub and play the full timeline across clip boundaries in the program monitor
 - Export the whole sequence as one MP4 with auto GPU preference or software fallback
+- Pick output aspect ratios like 16:9, 4:3, 2.35:1, 9:16, 3:4, 5.8-inch, 1:1, or custom width/height
 - Choose higher export bitrates and see estimated file size / render ETA during export
 - Automatically generate silent audio for clips that do not contain audio
 - Automatically generate compatible preview proxies for smoother playback

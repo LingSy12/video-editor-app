@@ -52,6 +52,11 @@ const els = {
   splitClipInspector: document.getElementById("splitClipInspector"),
   removeClip: document.getElementById("removeClip"),
   renderMode: document.getElementById("renderMode"),
+  aspectPreset: document.getElementById("aspectPreset"),
+  customSizeFields: document.getElementById("customSizeFields"),
+  customWidth: document.getElementById("customWidth"),
+  customHeight: document.getElementById("customHeight"),
+  aspectSummary: document.getElementById("aspectSummary"),
   resolutionPreset: document.getElementById("resolutionPreset"),
   fps: document.getElementById("fps"),
   videoBitrate: document.getElementById("videoBitrate"),
@@ -69,6 +74,53 @@ const els = {
   progressLabel: document.getElementById("progressLabel"),
   statusText: document.getElementById("statusText"),
 };
+
+const OUTPUT_ASPECT_PRESETS = Object.freeze({
+  source: {
+    label: "适应(原始 / First clip)",
+    sourceDriven: true,
+  },
+  custom: {
+    label: "自定义 / Custom",
+    custom: true,
+  },
+  "16:9": {
+    label: "16:9 (西瓜视频)",
+    ratio: 16 / 9,
+  },
+  "4:3": {
+    label: "4:3",
+    ratio: 4 / 3,
+  },
+  "2.35:1": {
+    label: "2.35:1",
+    ratio: 2.35,
+  },
+  "2:1": {
+    label: "2:1",
+    ratio: 2,
+  },
+  "1.85:1": {
+    label: "1.85:1",
+    ratio: 1.85,
+  },
+  "9:16": {
+    label: "9:16 (抖音)",
+    ratio: 9 / 16,
+  },
+  "3:4": {
+    label: "3:4",
+    ratio: 3 / 4,
+  },
+  "5.8:9": {
+    label: "5.8寸",
+    ratio: 9 / 19.5,
+  },
+  "1:1": {
+    label: "1:1",
+    ratio: 1,
+  },
+});
 
 function createId(prefix) {
   if (globalThis.crypto?.randomUUID) return `${prefix}-${globalThis.crypto.randomUUID()}`;
@@ -180,8 +232,121 @@ function findTimelineSegment(time) {
   return segments.find((segment) => (target === total && segment.index === segments.length - 1) || (target >= segment.start && target < segment.end)) || segments[segments.length - 1];
 }
 
-function getExportSettings() {
+function toEvenInteger(value, minimum, maximum) {
+  const rounded = Math.round(Number(value) || 0);
+  const clamped = Math.min(maximum, Math.max(minimum, rounded));
+  return clamped % 2 === 0 ? clamped : Math.max(minimum, clamped - 1);
+}
+
+function getBaseResolution() {
   const [width, height] = els.resolutionPreset.value.split("x").map(Number);
+  return {
+    width: width || 1920,
+    height: height || 1080,
+  };
+}
+
+function getAspectPresetDefinition(key = els.aspectPreset.value) {
+  return OUTPUT_ASPECT_PRESETS[key] || OUTPUT_ASPECT_PRESETS["16:9"];
+}
+
+function getReferenceAspectSource() {
+  const firstSequenceClip = state.sequence[0];
+  const mediaClip = firstSequenceClip ? getLibraryClipById(firstSequenceClip.mediaId) : selectedLibraryClip();
+
+  if (!mediaClip?.width || !mediaClip?.height) {
+    return null;
+  }
+
+  return {
+    width: mediaClip.width,
+    height: mediaClip.height,
+  };
+}
+
+function fitRatioToBounds(ratio, boxWidth, boxHeight) {
+  let width = boxWidth;
+  let height = Math.round(width / ratio);
+
+  if (height > boxHeight) {
+    height = boxHeight;
+    width = Math.round(height * ratio);
+  }
+
+  return {
+    width: toEvenInteger(width, 320, 7680),
+    height: toEvenInteger(height, 240, 4320),
+  };
+}
+
+function getResolvedOutputSizeForAspect(aspectKey = els.aspectPreset.value) {
+  const preset = getAspectPresetDefinition(aspectKey);
+  const base = getBaseResolution();
+
+  if (preset.custom) {
+    return {
+      width: toEvenInteger(els.customWidth.value, 320, 7680),
+      height: toEvenInteger(els.customHeight.value, 240, 4320),
+      label: preset.label,
+    };
+  }
+
+  let ratio = preset.ratio;
+  let label = preset.label;
+
+  if (preset.sourceDriven) {
+    const source = getReferenceAspectSource();
+    if (source) {
+      ratio = source.width / source.height;
+      label = `${preset.label} ${source.width}:${source.height}`;
+    } else {
+      ratio = base.width / base.height;
+      label = `${preset.label} (waiting for clip)`;
+    }
+  }
+
+  const landscapeBounds = {
+    width: Math.max(base.width, base.height),
+    height: Math.min(base.width, base.height),
+  };
+  const portraitBounds = {
+    width: landscapeBounds.height,
+    height: landscapeBounds.width,
+  };
+  const bounds = ratio >= 1 ? landscapeBounds : portraitBounds;
+  const fitted = fitRatioToBounds(ratio, bounds.width, bounds.height);
+
+  return {
+    ...fitted,
+    label,
+  };
+}
+
+function getResolvedOutputSize() {
+  return getResolvedOutputSizeForAspect(els.aspectPreset.value);
+}
+
+function seedCustomSizeFromAspect(aspectKey = "16:9") {
+  const seed = getResolvedOutputSizeForAspect(aspectKey === "custom" ? "16:9" : aspectKey);
+  els.customWidth.value = String(seed.width);
+  els.customHeight.value = String(seed.height);
+}
+
+function updateAspectSummary() {
+  const output = getResolvedOutputSize();
+  els.aspectSummary.textContent = `Output canvas ${output.width} x ${output.height} | ${output.label}`;
+}
+
+function syncAspectControls() {
+  const isCustom = els.aspectPreset.value === "custom";
+  els.customSizeFields.classList.toggle("hidden", !isCustom);
+  els.customWidth.disabled = !isCustom;
+  els.customHeight.disabled = !isCustom;
+  updateAspectSummary();
+}
+
+function getExportSettings() {
+  const { width, height } = getResolvedOutputSize();
   return {
     width,
     height,
@@ -190,7 +355,31 @@ function getExportSettings() {
     videoPreset: els.videoPreset.value,
     renderMode: els.renderMode.value,
     videoBitrate: els.videoBitrate.value,
+    aspectPreset: els.aspectPreset.value,
   };
+}
+
+function describeRenderMode(renderMode, usingHardwareEncoder) {
+  if (renderMode === "force-gpu") {
+    return usingHardwareEncoder ? "GPU forced" : "GPU required";
+  }
+
+  if (renderMode === "auto-gpu") {
+    return usingHardwareEncoder ? "Auto GPU active" : "Auto GPU fallback to CPU";
+  }
+
+  return "CPU software render";
+}
+
+function describeHardwareCapabilityIssue(capabilities) {
+  const unusableHardwareEncoders = capabilities?.unusableHardwareEncoders || [];
+  if (unusableHardwareEncoders.length === 0) {
+    return "";
+  }
+
+  return unusableHardwareEncoders
+    .map((encoder) => `${encoder.label}: ${encoder.probeError || "initialization failed"}`)
+    .join("; ");
 }
 
 function sequenceClipToExportClip(clip) {
@@ -376,20 +565,50 @@ function renderOutputPath() {
 }
 
 function renderExportSummary() {
-  const fallback = state.renderCapabilities?.preferredEncoder?.label || "Detecting...";
-  els.renderCapability.textContent = state.exportEstimate?.encoderLabel || fallback;
+  const settings = getExportSettings();
+  const output = getResolvedOutputSize();
+  const fallback = settings.renderMode === "force-gpu"
+    ? state.renderCapabilities?.detectedPipelineLabel || state.renderCapabilities?.detectedHardwareEncoder?.label || "GPU required"
+    : state.renderCapabilities?.preferredPipelineLabel || state.renderCapabilities?.preferredEncoder?.label || "Detecting...";
+  const activePipelineLabel =
+    state.exportEstimate?.pipelineLabel || state.exportEstimate?.encoderLabel || fallback;
+  els.renderCapability.textContent = activePipelineLabel;
   els.estimatedSize.textContent = state.exportEstimate?.estimatedFileSizeLabel || "-";
   els.estimatedRenderTime.textContent = state.exportEstimate?.estimatedRenderLabel || "-";
   els.estimatedDuration.textContent = formatTimecode(getSequenceDuration());
+  updateAspectSummary();
 
   if (state.exportEstimate) {
-    const mode = getExportSettings().videoBitrate === "auto" ? "auto bitrate" : "manual bitrate";
-    els.exportFootnote.textContent = `${state.exportEstimate.encoderLabel} | ${state.exportEstimate.resolvedVideoBitrateKbps} kbps ${mode} | ${state.exportEstimate.usingHardwareEncoder ? "GPU accelerated" : "CPU software render"}`;
+    const bitrateMode = settings.videoBitrate === "auto" ? "auto bitrate" : "manual bitrate";
+    const renderModeStatus = describeRenderMode(settings.renderMode, state.exportEstimate.usingHardwareEncoder);
+    els.exportFootnote.textContent = `${activePipelineLabel} | ${output.width} x ${output.height} | ${state.exportEstimate.resolvedVideoBitrateKbps} kbps ${bitrateMode} | ${renderModeStatus}`;
+    return;
+  }
+
+  if (settings.renderMode === "force-gpu") {
+    if (state.renderCapabilities?.detectedHardwareEncoder) {
+      els.exportFootnote.textContent = `Force GPU will use ${state.renderCapabilities.detectedPipelineLabel || state.renderCapabilities.detectedHardwareEncoder.label} and will stop instead of falling back to CPU.`;
+      return;
+    }
+
+    const hardwareIssue = describeHardwareCapabilityIssue(state.renderCapabilities);
+    if (hardwareIssue) {
+      els.exportFootnote.textContent = `Force GPU is selected, but the detected hardware encoder could not be initialized. ${hardwareIssue}`;
+      return;
+    }
+
+    els.exportFootnote.textContent = "Force GPU is selected, but no supported H.264 GPU encoder was detected. Export will fail until a GPU encoder is available.";
     return;
   }
 
   if (state.renderCapabilities?.detectedHardwareEncoder) {
-    els.exportFootnote.textContent = `Auto GPU will prefer ${state.renderCapabilities.detectedHardwareEncoder.label}.`;
+    els.exportFootnote.textContent = `Auto GPU will prefer ${state.renderCapabilities.preferredPipelineLabel || state.renderCapabilities.detectedHardwareEncoder.label}.`;
+    return;
+  }
+
+  const hardwareIssue = describeHardwareCapabilityIssue(state.renderCapabilities);
+  if (hardwareIssue) {
+    els.exportFootnote.textContent = `Auto GPU will render with CPU because the detected hardware encoder could not be initialized. ${hardwareIssue}`;
     return;
   }
 
@@ -401,6 +620,7 @@ function render() {
   renderSequence();
   renderInspector();
   renderTimelineTransport();
+  syncAspectControls();
   renderExportSummary();
   renderOutputPath();
 }
@@ -790,9 +1010,11 @@ async function exportTimeline() {
 
     els.estimatedSize.textContent = result.outputSizeLabel || humanFileSize(result.outputSizeBytes || 0);
     els.estimatedRenderTime.textContent = "Completed";
+    const completedPipelineLabel = result.pipelineLabel || result.encoderLabel;
+    els.renderCapability.textContent = completedPipelineLabel || els.renderCapability.textContent;
     setStatus(
       "Finished",
-      `Rendered ${result.clipCount} clip${result.clipCount === 1 ? "" : "s"} with ${result.encoderLabel} to ${result.outputPath}. Final size ${result.outputSizeLabel}.`,
+      `Rendered ${result.clipCount} clip${result.clipCount === 1 ? "" : "s"} with ${completedPipelineLabel}${result.fallbackFromHardware ? " (hardware fallback used software for reliability)" : ""} to ${result.outputPath}. Final size ${result.outputSizeLabel}.`,
       100,
     );
   } catch (error) {
@@ -899,6 +1121,8 @@ function wirePreviewEvents() {
 }
 
 function wireEvents() {
+  let previousAspectPreset = els.aspectPreset.value;
+
   els.importButton.addEventListener("click", importVideos);
   els.appendButton.addEventListener("click", () => addSelectedLibraryClipToSequence());
   els.browseOutput.addEventListener("click", chooseOutputPath);
@@ -916,7 +1140,29 @@ function wireEvents() {
     previewTimelineAt(Number(els.timelineScrubber.value), { autoplay: wasPlaying, forceReload: false });
   });
 
-  [els.renderMode, els.resolutionPreset, els.fps, els.videoBitrate, els.crf, els.videoPreset]
+  els.aspectPreset.addEventListener("change", () => {
+    if (els.aspectPreset.value === "custom") {
+      seedCustomSizeFromAspect(previousAspectPreset);
+    }
+    previousAspectPreset = els.aspectPreset.value;
+    syncAspectControls();
+    refreshExportEstimate();
+  });
+
+  els.resolutionPreset.addEventListener("change", () => {
+    syncAspectControls();
+    refreshExportEstimate();
+  });
+
+  [els.customWidth, els.customHeight].forEach((element) => {
+    element.addEventListener("input", syncAspectControls);
+    element.addEventListener("change", () => {
+      syncAspectControls();
+      refreshExportEstimate();
+    });
+  });
+
+  [els.renderMode, els.fps, els.videoBitrate, els.crf, els.videoPreset]
     .forEach((element) => element.addEventListener("change", refreshExportEstimate));
 
   bindTrimInputs();
@@ -931,11 +1177,12 @@ function wireEvents() {
     const eta = formatEta(progress.etaSeconds || 0);
     const size = humanFileSize(progress.estimatedFinalSizeBytes || 0);
     const speed = progress.speedMultiplier ? `${progress.speedMultiplier.toFixed(2)}x` : "warming up";
+    const pipelineLabel = progress.pipelineLabel || progress.encoderLabel || "Renderer";
 
     els.estimatedSize.textContent = size;
     els.estimatedRenderTime.textContent = progress.status === "done" ? "Completed" : eta;
-    els.renderCapability.textContent = progress.encoderLabel || els.renderCapability.textContent;
-    setStatus(label, `${current} / ${total} | ETA ${eta} | Est. ${size} | ${progress.encoderLabel || "Renderer"} | ${speed}`, percent);
+    els.renderCapability.textContent = pipelineLabel || els.renderCapability.textContent;
+    setStatus(label, `${current} / ${total} | ETA ${eta} | Est. ${size} | ${pipelineLabel} | ${speed}`, percent);
   });
 }
 

@@ -139,12 +139,42 @@
               <label class="field">
                 <span>Renderer</span>
                 <select id="renderMode">
-                  <option value="auto-gpu">Auto GPU (preferred)</option>
+                  <option value="force-gpu" selected>Force GPU (no CPU fallback)</option>
+                  <option value="auto-gpu">Auto GPU (fallback to CPU)</option>
                   <option value="software">Software x264</option>
                 </select>
               </label>
               <label class="field">
-                <span>Resolution Preset</span>
+                <span>Output Aspect</span>
+                <select id="aspectPreset">
+                  <option value="source">适应(原始 / First clip)</option>
+                  <option value="custom">自定义 / Custom</option>
+                  <option value="16:9" selected>16:9 (西瓜视频)</option>
+                  <option value="4:3">4:3</option>
+                  <option value="2.35:1">2.35:1</option>
+                  <option value="2:1">2:1</option>
+                  <option value="1.85:1">1.85:1</option>
+                  <option value="9:16">9:16 (抖音)</option>
+                  <option value="3:4">3:4</option>
+                  <option value="5.8:9">5.8寸</option>
+                  <option value="1:1">1:1</option>
+                </select>
+              </label>
+              <div id="customSizeFields" class="split-fields hidden">
+                <label class="field split-field">
+                  <span>Custom Width</span>
+                  <input id="customWidth" type="number" min="320" max="7680" step="2" value="1920" />
+                </label>
+                <label class="field split-field">
+                  <span>Custom Height</span>
+                  <input id="customHeight" type="number" min="240" max="4320" step="2" value="1080" />
+                </label>
+              </div>
+              <div class="export-footnote subtle-note" id="aspectSummary">
+                Output canvas 1920 x 1080 | 16:9
+              </div>
+              <label class="field">
+                <span>Base Resolution</span>
                 <select id="resolutionPreset">
                   <option value="1920x1080">1920 x 1080</option>
                   <option value="1280x720">1280 x 720</option>

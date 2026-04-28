@@ -20,9 +20,42 @@ const VIDEO_FILTERS = [
 
 let mainWindow;
 
-app.commandLine.appendSwitch("force_high_performance_gpu");
-app.commandLine.appendSwitch("ignore-gpu-blocklist");
-app.commandLine.appendSwitch("enable-gpu-rasterization");
+const GPU_SWITCHES = Object.freeze([
+  ["force_high_performance_gpu"],
+  ["ignore-gpu-blocklist"],
+  ["enable-gpu-rasterization"],
+  ["disable-software-rasterizer"],
+]);
+
+for (const [name, value] of GPU_SWITCHES) {
+  if (value) {
+    app.commandLine.appendSwitch(name, value);
+    continue;
+  }
+
+  app.commandLine.appendSwitch(name);
+}
+
+async function logGpuDiagnostics() {
+  try {
+    console.log("[gpu] feature status", app.getGPUFeatureStatus());
+    console.log("[gpu] basic info", await app.getGPUInfo("basic"));
+  } catch (error) {
+    console.warn("[gpu] Unable to read GPU diagnostics.", error);
+  }
+}
+
+app.once("gpu-info-update", () => {
+  void logGpuDiagnostics();
+});
+
+app.on("child-process-gone", (_event, details) => {
+  if (details.type !== "GPU") {
+    return;
+  }
+
+  console.warn("[gpu] GPU process exited.", details);
+});
 
 function createWindow() {
   mainWindow = new BrowserWindow({
