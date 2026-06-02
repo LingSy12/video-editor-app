@@ -9,6 +9,11 @@ Cutline Studio is a Windows desktop MVP for combining multiple source videos int
 - MP4 export with FFmpeg, GPU-preferred rendering, CUDA-assisted scaling when available, and bitrate presets
 - Output aspect presets including 16:9, 4:3, 2.35:1, 9:16, 3:4, 5.8-inch style, and 1:1
 
+## 📸 Screenshots
+
+<!-- Replace screenshots/screenshot.png with a real capture (keep the filename), or add more images below. -->
+![Cutline Studio](screenshots/screenshot.png)
+
 ## Requirements
 
 - Node.js installed
