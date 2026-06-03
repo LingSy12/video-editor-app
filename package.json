@@ -14,7 +14,7 @@
     "ffmpeg"
   ],
   "author": "OpenAI Codex",
-  "license": "ISC",
+  "license": "GPL-3.0-or-later",
   "build": {
     "appId": "com.openai.cutlinestudio",
     "productName": "Cutline Studio",
