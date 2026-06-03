@@ -60,3 +60,11 @@ The intermediate `win-unpacked` folder is removed automatically after packaging 
 - Export re-encodes clips to a consistent resolution and frame rate for reliable stitching.
 - Timeline preview is proxy-assisted for smoother playback and better codec compatibility.
 - The current packaged build is an unsigned portable `.exe` and uses Electron's default app icon.
+
+## License
+
+This project is licensed under the **GNU General Public License v3.0 (GPL-3.0)** — see the [LICENSE](LICENSE) file for the full text.
+
+### Third-party software
+
+Cutline Studio bundles **FFmpeg** via the [`ffmpeg-static`](https://www.npmjs.com/package/ffmpeg-static) package. The bundled FFmpeg build is distributed under the **GNU GPL**; because a GPL-licensed FFmpeg binary is redistributed with this application, the project as a whole is released under **GPL-3.0**. FFmpeg is © the FFmpeg developers — see the [FFmpeg legal page](https://ffmpeg.org/legal.html) for details.
