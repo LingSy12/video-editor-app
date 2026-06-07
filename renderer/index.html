@@ -10,12 +10,24 @@
     <div class="app-shell">
       <header class="topbar">
         <div>
-          <p class="eyebrow">Desktop Video Editor</p>
+          <p class="eyebrow">Desktop Video Editor · v1.17.2</p>
           <h1>Cutline Studio</h1>
         </div>
         <div class="topbar-actions">
-          <button id="importButton" class="button button-primary">Import Videos</button>
-          <button id="appendButton" class="button">Add Selected To Sequence</button>
+          <select id="languageSelect" class="button lang-select" title="软件语言 / Language">
+            <option value="zh">中文</option>
+            <option value="en">English</option>
+          </select>
+          <button id="undoButton" class="button" title="撤销 / Undo (Ctrl+Z)" disabled>↶ <span class="lang-zh">撤销</span><span class="lang-en">Undo</span></button>
+          <button id="redoButton" class="button" title="重做 / Redo (Ctrl+Y / Ctrl+Shift+Z)" disabled>↷ <span class="lang-zh">重做</span><span class="lang-en">Redo</span></button>
+          <button id="openProjectButton" class="button" title="打开工程 / Open Project (Ctrl+O)">📂 <span class="lang-zh">打开</span><span class="lang-en">Open</span></button>
+          <button id="saveProjectButton" class="button" title="保存工程 / Save Project (Ctrl+S)">💾 <span class="lang-zh">保存</span><span class="lang-en">Save</span></button>
+          <button id="recentProjectsButton" class="button" title="最近打开的工程 / Recent projects">⏷</button>
+          <button id="importSubtitleButton" class="button" title="导入字幕 .srt / .vtt / Import subtitle file"><span class="lang-zh">字幕导入</span><span class="lang-en">Subs In</span></button>
+          <button id="generateSubtitleButton" class="button" title="本地离线生成字幕 / Local offline transcribe"><span class="lang-zh">字幕生成</span><span class="lang-en">Subs Gen</span></button>
+          <button id="exportSubtitleButton" class="button" title="字幕轨导出为 .srt / Export subtitle track"><span class="lang-zh">字幕导出</span><span class="lang-en">Subs Out</span></button>
+          <button id="importButton" class="button button-primary"><span class="lang-zh">导入视频</span><span class="lang-en">Import Videos</span></button>
+          <button id="appendButton" class="button"><span class="lang-zh">加入时间线</span><span class="lang-en">Add To Sequence</span></button>
         </div>
       </header>
 
@@ -23,37 +35,40 @@
         <section class="panel media-panel">
           <div class="panel-header">
             <div>
-              <p class="panel-kicker">Project</p>
-              <h2>Media Bin</h2>
+              <p class="panel-kicker"><span class="lang-zh">工程</span><span class="lang-en">Project</span></p>
+              <h2><span class="lang-zh">媒体库</span><span class="lang-en">Media Bin</span></h2>
             </div>
             <span id="libraryCount" class="pill">0 clips</span>
           </div>
           <div id="libraryList" class="library-list empty-state">
-            Import a few source videos to begin building the sequence.
+            <span class="lang-zh">导入一些视频开始搭建序列。</span>
+            <span class="lang-en">Import a few source videos to begin building the sequence.</span>
           </div>
         </section>
 
         <section class="panel preview-panel">
           <div class="panel-header">
             <div>
-              <p class="panel-kicker">Program Monitor</p>
-              <h2 id="previewTitle">No clip selected</h2>
+              <p class="panel-kicker"><span class="lang-zh">预览监视器</span><span class="lang-en">Program Monitor</span></p>
+              <h2 id="previewTitle"><span class="lang-zh">未选中片段</span><span class="lang-en">No clip selected</span></h2>
             </div>
-            <span id="previewMeta" class="pill subtle">Ready</span>
+            <span id="previewMeta" class="pill subtle"><span class="lang-zh">就绪</span><span class="lang-en">Ready</span></span>
           </div>
           <div class="preview-stage">
-            <video id="previewPlayer" controls preload="metadata"></video>
+            <video id="previewPlayer" preload="metadata"></video>
+            <div id="previewSubtitleOverlay" class="preview-subtitle"></div>
             <div class="preview-overlay">
               <div class="preview-chip" id="previewModeChip">Clip Preview</div>
               <div class="preview-chip" id="sequenceDurationChip">Timeline 00:00.000</div>
+              <button id="previewZoomLabel" type="button" class="preview-chip preview-zoom-pill" title="Ctrl+Wheel 缩放 · Alt+拖动平移 · 双击复位 / Ctrl+Wheel to zoom · Alt+drag to pan · dbl-click to reset">100%</button>
             </div>
           </div>
           <div class="monitor-controls">
             <div class="transport-row">
-              <button id="jumpStartButton" class="button">To Start</button>
-              <button id="playTimelineButton" class="button button-primary">Play Timeline</button>
-              <button id="jumpEndButton" class="button">To End</button>
-              <button id="splitClipButton" class="button">Split At Playhead</button>
+              <button id="jumpStartButton" class="button"><span class="lang-zh">到开头</span><span class="lang-en">To Start</span></button>
+              <button id="playTimelineButton" class="button button-primary"><span class="lang-zh">播放时间线</span><span class="lang-en">Play Timeline</span></button>
+              <button id="jumpEndButton" class="button"><span class="lang-zh">到结尾</span><span class="lang-en">To End</span></button>
+              <button id="splitClipButton" class="button"><span class="lang-zh">在播放头切分</span><span class="lang-en">Split At Playhead</span></button>
             </div>
             <div class="scrub-row">
               <span id="timelineCurrentLabel" class="timecode">00:00.000</span>
@@ -69,27 +84,29 @@
               <span id="timelineTotalLabel" class="timecode">00:00.000</span>
             </div>
             <div class="monitor-metadata">
-              <span id="activeSegmentLabel" class="badge">Timeline not loaded</span>
-              <span id="proxyStatusLabel" class="badge cool">Preview proxy idle</span>
+              <span id="activeSegmentLabel" class="badge"><span class="lang-zh">时间线未加载</span><span class="lang-en">Timeline not loaded</span></span>
+              <span id="proxyStatusLabel" class="badge cool"><span class="lang-zh">预览代理 空闲</span><span class="lang-en">Preview proxy idle</span></span>
             </div>
           </div>
           <div id="previewHint" class="preview-hint">
-            Select a clip in the media bin or sequence to preview it here.
+            <span class="lang-zh">在媒体库或时间线里选一个片段开始预览。</span>
+            <span class="lang-en">Select a clip in the media bin or sequence to preview it here.</span>
           </div>
         </section>
 
         <aside class="panel inspector-panel">
           <div class="panel-header">
             <div>
-              <p class="panel-kicker">Inspector</p>
-              <h2>Clip & Export</h2>
+              <p class="panel-kicker"><span class="lang-zh">检查器</span><span class="lang-en">Inspector</span></p>
+              <h2><span class="lang-zh">片段 & 导出</span><span class="lang-en">Clip & Export</span></h2>
             </div>
           </div>
 
           <div class="inspector-group">
-            <h3>Selected Clip</h3>
+            <h3><span class="lang-zh">选中的片段</span><span class="lang-en">Selected Clip</span></h3>
             <div id="inspectorEmpty" class="mini-empty">
-              Pick a sequence clip to edit trim points.
+              <span class="lang-zh">选一个时间线片段编辑剪辑点。</span>
+              <span class="lang-en">Pick a sequence clip to edit trim points.</span>
             </div>
             <div id="clipInspector" class="stack hidden">
               <label class="field">
@@ -124,154 +141,467 @@
                   <strong id="clipPlayheadPosition">00:00.000</strong>
                 </div>
               </div>
+              <details class="inspector-advanced">
+                <summary>速度 / 淡入淡出 / 增益 (导出生效需后续 session)</summary>
+                <label class="field">
+                  <span>播放速度 / Speed (0.25–4×)</span>
+                  <input id="clipSpeed" type="number" min="0.25" max="4" step="0.05" value="1" />
+                </label>
+                <div class="metrics-row">
+                  <label class="field split-field">
+                    <span>淡入 / Fade In (s)</span>
+                    <input id="clipFadeIn" type="number" min="0" step="0.05" value="0" />
+                  </label>
+                  <label class="field split-field">
+                    <span>淡出 / Fade Out (s)</span>
+                    <input id="clipFadeOut" type="number" min="0" step="0.05" value="0" />
+                  </label>
+                </div>
+                <label class="field">
+                  <span>音量 / Volume (0–200%)</span>
+                  <input id="clipGain" type="range" min="0" max="2" step="0.05" value="1" />
+                  <span class="field-hint" id="clipGainLabel">100%</span>
+                </label>
+              </details>
               <div class="button-row wrap-row">
-                <button id="moveClipUp" class="button">Move Up</button>
-                <button id="moveClipDown" class="button">Move Down</button>
-                <button id="splitClipInspector" class="button">Split At Playhead</button>
-                <button id="removeClip" class="button button-danger">Remove</button>
+                <button id="moveClipUp" class="button"><span class="lang-zh">上移</span><span class="lang-en">Move Up</span></button>
+                <button id="moveClipDown" class="button"><span class="lang-zh">下移</span><span class="lang-en">Move Down</span></button>
+                <button id="splitClipInspector" class="button"><span class="lang-zh">切分</span><span class="lang-en">Split At Playhead</span></button>
+                <button id="removeClip" class="button button-danger"><span class="lang-zh">删除</span><span class="lang-en">Remove</span></button>
+              </div>
+            </div>
+            <div id="subtitleClipInspector" class="stack hidden">
+              <label class="field">
+                <span>字幕文本 / Cue Text</span>
+                <textarea id="subtitleCueText" rows="3" style="font-family:inherit;resize:vertical;"></textarea>
+              </label>
+              <div class="metrics-row">
+                <label class="field split-field">
+                  <span>开始 / Start (s)</span>
+                  <input id="subtitleCueStart" type="number" min="0" step="0.001" />
+                </label>
+                <label class="field split-field">
+                  <span>时长 / Duration (s)</span>
+                  <input id="subtitleCueDuration" type="number" min="0.1" step="0.01" />
+                </label>
+              </div>
+              <label class="field">
+                <span>字幕字号 / Font Size (px)</span>
+                <input id="subtitleFontSize" type="range" min="8" max="72" step="1" value="18" />
+                <span class="field-hint" id="subtitleFontSizeLabel">18 px</span>
+              </label>
+              <div class="button-row wrap-row">
+                <button id="splitSubtitleAtPlayhead" class="button">在播放头切分</button>
+                <button id="removeSubtitleButton" class="button button-danger">删除字幕</button>
+              </div>
+            </div>
+            <div id="audioClipInspector" class="stack hidden">
+              <label class="field">
+                <span>音频片段 / Audio Clip</span>
+                <input id="audioClipName" type="text" readonly />
+              </label>
+              <div class="metrics-row">
+                <label class="field split-field">
+                  <span>Trim Start (s)</span>
+                  <input id="audioTrimStart" type="number" min="0" step="0.001" />
+                </label>
+                <label class="field split-field">
+                  <span>Trim End (s)</span>
+                  <input id="audioTrimEnd" type="number" min="0" step="0.001" />
+                </label>
+              </div>
+              <label class="field">
+                <span>时间线位置 / Timeline Start (s)</span>
+                <input id="audioTimelineStart" type="number" min="0" step="0.001" />
+              </label>
+              <label class="field">
+                <span>音量 / Volume (0–200%)</span>
+                <input id="audioGain" type="range" min="0" max="2" step="0.05" value="1" />
+                <span class="field-hint" id="audioGainLabel">100%</span>
+              </label>
+              <div class="metrics-row">
+                <label class="field split-field">
+                  <span>淡入 / Fade In (s)</span>
+                  <input id="audioFadeIn" type="number" min="0" step="0.05" value="0" />
+                </label>
+                <label class="field split-field">
+                  <span>淡出 / Fade Out (s)</span>
+                  <input id="audioFadeOut" type="number" min="0" step="0.05" value="0" />
+                </label>
+              </div>
+              <div class="button-row wrap-row">
+                <button id="removeAudioClipButton" class="button button-danger">Remove</button>
               </div>
             </div>
           </div>
 
           <div class="inspector-group export-group">
-            <h3>Export Settings</h3>
+            <h3><span class="lang-zh">导出</span><span class="lang-en">Export</span></h3>
             <div class="stack">
-              <label class="field">
-                <span>Renderer</span>
-                <select id="renderMode">
-                  <option value="force-gpu" selected>Force GPU (no CPU fallback)</option>
-                  <option value="auto-gpu">Auto GPU (fallback to CPU)</option>
-                  <option value="software">Software x264</option>
-                </select>
-              </label>
-              <label class="field">
-                <span>Output Aspect</span>
-                <select id="aspectPreset">
-                  <option value="source">适应(原始 / First clip)</option>
-                  <option value="custom">自定义 / Custom</option>
-                  <option value="16:9" selected>16:9 (西瓜视频)</option>
-                  <option value="4:3">4:3</option>
-                  <option value="2.35:1">2.35:1</option>
-                  <option value="2:1">2:1</option>
-                  <option value="1.85:1">1.85:1</option>
-                  <option value="9:16">9:16 (抖音)</option>
-                  <option value="3:4">3:4</option>
-                  <option value="5.8:9">5.8寸</option>
-                  <option value="1:1">1:1</option>
-                </select>
-              </label>
-              <div id="customSizeFields" class="split-fields hidden">
-                <label class="field split-field">
-                  <span>Custom Width</span>
-                  <input id="customWidth" type="number" min="320" max="7680" step="2" value="1920" />
-                </label>
-                <label class="field split-field">
-                  <span>Custom Height</span>
-                  <input id="customHeight" type="number" min="240" max="4320" step="2" value="1080" />
-                </label>
-              </div>
-              <div class="export-footnote subtle-note" id="aspectSummary">
-                Output canvas 1920 x 1080 | 16:9
-              </div>
-              <label class="field">
-                <span>Base Resolution</span>
-                <select id="resolutionPreset">
-                  <option value="1920x1080">1920 x 1080</option>
-                  <option value="1280x720">1280 x 720</option>
-                  <option value="3840x2160">3840 x 2160</option>
-                </select>
-              </label>
-              <label class="field">
-                <span>FPS</span>
-                <input id="fps" type="number" min="12" max="60" step="1" value="30" />
-              </label>
-              <label class="field">
-                <span>Video Bitrate</span>
-                <select id="videoBitrate">
-                  <option value="auto" selected>Auto (recommended)</option>
-                  <option value="12000k">High 12 Mbps</option>
-                  <option value="20000k">Very High 20 Mbps</option>
-                  <option value="35000k">Premium 35 Mbps</option>
-                  <option value="50000k">Master 50 Mbps</option>
-                </select>
-              </label>
-              <label class="field">
-                <span>Quality Fallback (CRF)</span>
-                <input id="crf" type="number" min="12" max="35" step="1" value="20" />
-              </label>
-              <label class="field">
-                <span>Speed Preset</span>
-                <select id="videoPreset">
-                  <option value="veryfast">veryfast</option>
-                  <option value="fast">fast</option>
-                  <option value="medium" selected>medium</option>
-                  <option value="slow">slow</option>
-                </select>
-              </label>
-
               <div class="metrics-row">
                 <div class="metric-card">
-                  <span>Renderer Ready</span>
+                  <span><span class="lang-zh">渲染器</span><span class="lang-en">Renderer Ready</span></span>
                   <strong id="renderCapability">Detecting...</strong>
                 </div>
                 <div class="metric-card">
-                  <span>Est. File Size</span>
-                  <strong id="estimatedSize">-</strong>
-                </div>
-              </div>
-              <div class="metrics-row">
-                <div class="metric-card">
-                  <span>Est. Render Time</span>
-                  <strong id="estimatedRenderTime">-</strong>
-                </div>
-                <div class="metric-card">
-                  <span>Timeline Length</span>
+                  <span><span class="lang-zh">时间线长度</span><span class="lang-en">Timeline Length</span></span>
                   <strong id="estimatedDuration">00:00.000</strong>
                 </div>
               </div>
-              <div class="export-footnote" id="exportFootnote">
-                Export estimates update with your timeline length, render engine, and bitrate.
-              </div>
-
-              <label class="field">
-                <span>Output File</span>
-                <div class="path-picker">
-                  <input id="outputPath" type="text" readonly placeholder="Choose an export destination" />
-                  <button id="browseOutput" class="button">Browse</button>
-                </div>
-              </label>
-              <button id="exportButton" class="button button-primary button-wide">
-                Export Timeline To MP4
+              <button id="openExportButton" class="button button-primary button-wide">
+                <span class="lang-zh">导出 …</span><span class="lang-en">Export …</span>
               </button>
               <div class="progress-block">
                 <div class="progress-track">
                   <div id="progressBar" class="progress-fill"></div>
                 </div>
                 <div class="progress-copy">
-                  <strong id="progressLabel">Idle</strong>
-                  <span id="statusText">Waiting for clips.</span>
+                  <strong id="progressLabel"><span class="lang-zh">空闲</span><span class="lang-en">Idle</span></strong>
+                  <span id="statusText"><span class="lang-zh">等待片段。</span><span class="lang-en">Waiting for clips.</span></span>
                 </div>
               </div>
             </div>
           </div>
         </aside>
 
+        <div id="rowDivider" class="row-divider" role="separator" aria-orientation="horizontal" title="拖动调整 Timeline 大小 / Drag to resize"></div>
+
         <section class="panel sequence-panel">
           <div class="panel-header">
             <div>
-              <p class="panel-kicker">Timeline</p>
-              <h2>Sequence</h2>
+              <p class="panel-kicker"><span class="lang-zh">时间线</span><span class="lang-en">Timeline</span></p>
+              <h2><span class="lang-zh">序列</span><span class="lang-en">Sequence</span></h2>
             </div>
             <div class="sequence-actions">
               <span id="sequenceCount" class="pill">0 clips</span>
               <span id="sequenceRuntime" class="pill accent">00:00.000 total</span>
+              <button id="timelineZoomPill" type="button" class="pill subtle pill-button" title="Ctrl+Wheel / +/- 缩放 · 点击重置 / Ctrl+Wheel or +/- to zoom · click to reset">100%</button>
             </div>
           </div>
           <div id="sequenceList" class="sequence-list empty-state">
-            Add clips from the media bin and arrange them in order.
+            <span class="lang-zh">从媒体库添加片段，按顺序排列。</span>
+            <span class="lang-en">Add clips from the media bin and arrange them in order.</span>
           </div>
         </section>
       </main>
+    </div>
+
+    <!-- ── Export modal (剪映-style) ── -->
+    <div id="exportModal" class="modal-overlay hidden" aria-hidden="true" role="dialog" aria-modal="true">
+      <div class="modal-shell">
+        <header class="modal-header">
+          <h2>导出 / Export <span id="exportModalTitleLabel" class="modal-title-suffix"></span></h2>
+          <button id="closeExportModal" class="modal-close" type="button" aria-label="Close">×</button>
+        </header>
+
+        <div class="modal-body">
+          <aside class="modal-preview">
+            <div class="modal-thumb" id="exportThumb">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+                <rect x="2" y="4" width="20" height="14" rx="2"/>
+                <path d="m10 9 5 3-5 3z"/>
+              </svg>
+              <span class="modal-thumb-label">Timeline Preview</span>
+            </div>
+            <p class="modal-thumb-foot">封面将取自时间线首帧 / Cover taken from first frame.</p>
+          </aside>
+
+          <div class="modal-form">
+            <div class="modal-row">
+              <label class="field">
+                <span>导出时间线 / Sequence</span>
+                <input id="exportSequenceName" type="text" readonly value="时间线01" />
+              </label>
+              <label class="field">
+                <span>标题 / Title</span>
+                <input id="exportTitle" type="text" placeholder="e.g. 5月5日3" />
+              </label>
+              <label class="field">
+                <span>导出至 / Export to</span>
+                <div class="path-picker">
+                  <input id="exportFolderPath" type="text" placeholder="Pick a folder…" readonly />
+                  <button id="exportFolderBrowse" type="button" class="button" title="选择文件夹 / Choose folder">📁</button>
+                </div>
+              </label>
+              <label class="field">
+                <span>预设 / Preset</span>
+                <select id="exportPreset">
+                  <option value="custom" selected>自定义 / Custom</option>
+                  <option value="douyin-1080">抖音 / TikTok 1080×1920 30fps</option>
+                  <option value="douyin-720">抖音 / TikTok 720×1280 30fps</option>
+                  <option value="xigua-1080">西瓜视频 1920×1080 30fps</option>
+                  <option value="youtube-1080">YouTube 1080p H.264</option>
+                  <option value="youtube-4k">YouTube 4K H.265</option>
+                  <option value="bilibili-1080">B站 1080P H.264 ~6Mbps</option>
+                  <option value="square-1080">方形 / Square 1080×1080</option>
+                </select>
+              </label>
+            </div>
+
+            <section class="modal-section">
+              <label class="modal-section-toggle">
+                <input id="enableVideoExport" type="checkbox" checked />
+                <span class="modal-section-title">视频导出 / Video Export</span>
+              </label>
+              <div class="modal-section-body" id="videoExportBody">
+                <label class="field">
+                  <span>Renderer</span>
+                  <select id="renderMode">
+                    <option value="force-gpu" selected>Force GPU (no CPU fallback)</option>
+                    <option value="auto-gpu">Auto GPU (fallback to CPU)</option>
+                    <option value="software">Software encoder</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Output Aspect</span>
+                  <select id="aspectPreset">
+                    <option value="source">适应 / Source</option>
+                    <option value="custom">自定义 / Custom</option>
+                    <option value="16:9" selected>16:9 (西瓜视频)</option>
+                    <option value="4:3">4:3</option>
+                    <option value="2.35:1">2.35:1</option>
+                    <option value="2:1">2:1</option>
+                    <option value="1.85:1">1.85:1</option>
+                    <option value="9:16">9:16 (抖音)</option>
+                    <option value="3:4">3:4</option>
+                    <option value="5.8:9">5.8寸</option>
+                    <option value="1:1">1:1</option>
+                  </select>
+                </label>
+                <div id="customSizeFields" class="split-fields hidden">
+                  <label class="field split-field">
+                    <span>Custom Width</span>
+                    <input id="customWidth" type="number" min="320" max="7680" step="2" value="1920" />
+                  </label>
+                  <label class="field split-field">
+                    <span>Custom Height</span>
+                    <input id="customHeight" type="number" min="240" max="4320" step="2" value="1080" />
+                  </label>
+                </div>
+                <div class="export-footnote subtle-note" id="aspectSummary">
+                  Output canvas 1920 x 1080 | 16:9
+                </div>
+                <label class="field">
+                  <span>分辨率 / Resolution</span>
+                  <select id="resolutionPreset">
+                    <option value="1920x1080">1080P</option>
+                    <option value="1280x720">720P</option>
+                    <option value="3840x2160">4K (2160P)</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>格式 / Container</span>
+                  <select id="videoContainer">
+                    <option value="mp4" selected>MP4</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>帧率 / Frame rate</span>
+                  <select id="fps">
+                    <option value="24">24</option>
+                    <option value="25">25</option>
+                    <option value="30" selected>30</option>
+                    <option value="50">50</option>
+                    <option value="60">60</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>视频码率 / Bitrate</span>
+                  <select id="videoBitrate">
+                    <option value="auto" selected>推荐 / Recommended</option>
+                    <option value="12000k">较高 12 Mbps</option>
+                    <option value="20000k">更高 20 Mbps</option>
+                    <option value="35000k">最高 35 Mbps</option>
+                    <option value="50000k">极致 50 Mbps</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>视频编码 / Codec</span>
+                  <select id="videoCodec">
+                    <option value="h264" selected>H.264 / AVC</option>
+                    <option value="hevc">H.265 / HEVC</option>
+                  </select>
+                </label>
+                <details class="modal-advanced">
+                  <summary>高级 / Advanced</summary>
+                  <label class="field">
+                    <span>Quality Fallback (CRF)</span>
+                    <input id="crf" type="number" min="12" max="35" step="1" value="20" />
+                  </label>
+                  <label class="field">
+                    <span>Speed Preset</span>
+                    <select id="videoPreset">
+                      <option value="veryfast">veryfast</option>
+                      <option value="fast">fast</option>
+                      <option value="medium" selected>medium</option>
+                      <option value="slow">slow</option>
+                    </select>
+                  </label>
+                </details>
+              </div>
+            </section>
+
+            <section class="modal-section">
+              <label class="modal-section-toggle">
+                <input id="enableAudioExport" type="checkbox" />
+                <span class="modal-section-title">音频导出 / Audio Export</span>
+              </label>
+              <p class="modal-section-hint">
+                勾选后会额外输出一个独立音频文件（与视频文件同目录）。
+              </p>
+              <div class="modal-section-body" id="audioExportBody">
+                <label class="field">
+                  <span>格式 / Format</span>
+                  <select id="audioFormat">
+                    <option value="m4a" selected>M4A (AAC)</option>
+                    <option value="mp3">MP3</option>
+                    <option value="wav">WAV (PCM 无损)</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>比特率 / Bitrate</span>
+                  <select id="audioBitrate">
+                    <option value="96k">96 kbps</option>
+                    <option value="128k">128 kbps</option>
+                    <option value="192k" selected>192 kbps</option>
+                    <option value="256k">256 kbps</option>
+                    <option value="320k">320 kbps</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>采样率 / Sample rate</span>
+                  <select id="audioSampleRate">
+                    <option value="22050">22050 Hz</option>
+                    <option value="32000">32000 Hz</option>
+                    <option value="44100">44100 Hz</option>
+                    <option value="48000" selected>48000 Hz</option>
+                    <option value="96000">96000 Hz</option>
+                  </select>
+                </label>
+              </div>
+            </section>
+
+            <div class="export-footnote" id="exportFootnote">
+              Export estimates update with your timeline length, render engine, and bitrate.
+            </div>
+          </div>
+        </div>
+
+        <footer class="modal-footer">
+          <div class="modal-summary">
+            <span>时长: <strong id="estimatedDurationModal">00:00.000</strong></span>
+            <span>·</span>
+            <span>大小: <strong id="estimatedSize">-</strong> <em>(估计)</em></span>
+            <span>·</span>
+            <span>预计耗时: <strong id="estimatedRenderTime">-</strong></span>
+          </div>
+          <div class="modal-actions">
+            <button id="cancelExportModal" class="button" type="button">取消 / Cancel</button>
+            <button id="confirmExportButton" class="button button-primary" type="button">导出 / Export</button>
+          </div>
+        </footer>
+      </div>
+    </div>
+
+    <!-- ── Generate Subtitles modal (local faster-whisper via ytsubtitle) ── -->
+    <div id="generateSubtitleModal" class="modal-overlay hidden" aria-hidden="true" role="dialog" aria-modal="true">
+      <div class="modal-shell modal-shell-narrow">
+        <header class="modal-header">
+          <h2>生成字幕 / Generate Subtitles (本地离线)</h2>
+          <button id="closeGenerateSubtitleModal" class="modal-close" type="button" aria-label="Close">×</button>
+        </header>
+        <div class="modal-body modal-body-stack">
+          <div class="modal-form">
+            <p class="modal-section-hint">
+              本地离线转写，使用 <code>D:\youtubesubtitle</code> 里的 faster-whisper 工具。
+              全部在本机运行，不上云。首次使用某个模型时需联网下载模型文件。
+            </p>
+            <label class="field">
+              <span>转写 Engine 目录 / Engine Root</span>
+              <div class="path-picker">
+                <input id="ytsubRoot" type="text" placeholder="(自动检测内嵌的 subtitle-engine 子目录)" />
+                <button id="ytsubRootBrowse" type="button" class="button" title="选择文件夹">📁</button>
+                <button id="ytsubResetRoot" type="button" class="button" title="重置为内嵌路径">↺</button>
+              </div>
+              <span id="ytsubEngineStatus" class="field-hint">检测中…</span>
+            </label>
+            <div class="metrics-row">
+              <label class="field split-field">
+                <span>模型 / Model</span>
+                <select id="ytsubModel">
+                  <option value="tiny">tiny (最快)</option>
+                  <option value="base">base</option>
+                  <option value="small">small</option>
+                  <option value="medium" selected>medium (推荐)</option>
+                  <option value="large-v3">large-v3 (最准, 慢)</option>
+                </select>
+              </label>
+              <label class="field split-field">
+                <span>计算设备 / Device</span>
+                <select id="ytsubDevice">
+                  <option value="auto" selected>自动 / Auto</option>
+                  <option value="cuda">CUDA (NVIDIA GPU)</option>
+                  <option value="cpu">CPU</option>
+                </select>
+              </label>
+            </div>
+            <div class="metrics-row">
+              <label class="field split-field">
+                <span>语言 / Language</span>
+                <select id="ytsubLanguage">
+                  <option value="zh" selected>中文 / Chinese</option>
+                  <option value="en">English</option>
+                  <option value="ja">日本語 / Japanese</option>
+                  <option value="ko">한국어 / Korean</option>
+                  <option value="es">Español</option>
+                  <option value="fr">Français</option>
+                  <option value="de">Deutsch</option>
+                  <option value="ru">Русский</option>
+                  <option value="">自动检测 / Auto</option>
+                </select>
+              </label>
+              <label class="field split-field">
+                <span>来源 / Source</span>
+                <select id="ytsubSource">
+                  <option value="all-timeline" selected>整条时间线 / Whole timeline</option>
+                  <option value="selected">选中片段 / Selected clip</option>
+                  <option value="timeline">第一条 V 片段 / First V clip</option>
+                </select>
+              </label>
+            </div>
+            <div class="metrics-row">
+              <label class="modal-section-toggle">
+                <input id="ytsubLowVram" type="checkbox" />
+                <span class="modal-section-title">低显存模式 / Low VRAM</span>
+              </label>
+              <label class="modal-section-toggle">
+                <input id="ytsubAccurate" type="checkbox" />
+                <span class="modal-section-title">精确时间 / Accurate timing</span>
+              </label>
+            </div>
+            <label class="field">
+              <span>提示词 / Initial Prompt (可选)</span>
+              <input id="ytsubPrompt" type="text" placeholder="e.g. 西瓜视频, 抖音, 剪映..." />
+            </label>
+          </div>
+          <div class="progress-block">
+            <div class="progress-track">
+              <div id="ytsubProgressBar" class="progress-fill" style="width:0%"></div>
+            </div>
+            <div class="progress-copy">
+              <strong id="ytsubStatus">准备就绪 / Ready.</strong>
+              <span id="ytsubEta"></span>
+            </div>
+          </div>
+        </div>
+        <footer class="modal-footer">
+          <div class="modal-actions modal-actions-right">
+            <button id="setupEngineButton" class="button" type="button" title="未检测到 venv 时点这里安装">⚙ 安装 Engine</button>
+            <button id="cancelGenerateSubtitle" class="button" type="button">取消 / Cancel</button>
+            <button id="confirmGenerateSubtitle" class="button button-primary" type="button">开始转写 / Transcribe</button>
+          </div>
+        </footer>
+      </div>
     </div>
 
     <script src="./renderer.js"></script>

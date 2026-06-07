@@ -1,12 +1,12 @@
 {
   "name": "video-editor-app",
-  "version": "1.0.2",
+  "version": "1.17.2",
   "description": "Desktop multi-clip video editor for combining and exporting videos as one file.",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "smoke": "node scripts/smoke.js",
-    "pack:win": "electron-builder --win portable"
+    "pack:win": "electron-builder --win zip"
   },
   "keywords": [
     "electron",
@@ -29,19 +29,23 @@
       "preload.js",
       "renderer/**/*",
       "src/**/*",
-      "package.json"
+      "package.json",
+      "subtitle-engine/**/*",
+      "!subtitle-engine/.venv/**",
+      "!subtitle-engine/vendor/downloads/**",
+      "!subtitle-engine/**/__pycache__/**"
     ],
     "win": {
       "signAndEditExecutable": false,
       "target": [
         {
-          "target": "portable",
+          "target": "zip",
           "arch": [
             "x64"
           ]
         }
       ],
-      "artifactName": "${productName}-${version}-portable.${ext}"
+      "artifactName": "${productName}-${version}-win-x64.${ext}"
     }
   },
   "dependencies": {

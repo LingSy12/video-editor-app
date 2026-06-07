@@ -11,10 +11,13 @@
   --accent-cool: #5ad2ff;
   --danger: #ff6d73;
   --shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
-  --radius-xl: 28px;
-  --radius-lg: 20px;
-  --radius-md: 14px;
-  --grid-gap: 18px;
+  --radius-xl: 20px;
+  --radius-lg: 16px;
+  --radius-md: 12px;
+  --grid-gap: 12px;
+  /* Top-row height used by the workspace grid. JS drags the row-divider to
+     update this so the user can resize the Timeline Sequence panel. */
+  --top-row-h: 62vh;
   font-family: "Segoe UI Variable Display", "Aptos", "Trebuchet MS", sans-serif;
 }
 
@@ -39,36 +42,44 @@ body {
 
 .app-shell {
   min-height: 100vh;
-  padding: 18px;
+  padding: 10px;
 }
 
 .topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 18px;
-  padding: 18px 22px;
-  margin-bottom: 18px;
+  gap: 12px;
+  padding: 8px 14px;
+  margin-bottom: 10px;
   border: 1px solid var(--panel-border);
   border-radius: var(--radius-xl);
   background: linear-gradient(135deg, rgba(12, 22, 32, 0.96), rgba(20, 31, 41, 0.9));
   box-shadow: var(--shadow);
 }
 
-.topbar h1,
+.topbar h1 {
+  margin: 0;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  font-size: 1.15rem;
+  line-height: 1.15;
+}
+
 .panel-header h2,
 .inspector-group h3 {
   margin: 0;
   font-weight: 650;
   letter-spacing: 0.02em;
+  font-size: 1rem;
 }
 
 .eyebrow,
 .panel-kicker {
-  margin: 0 0 6px;
+  margin: 0 0 2px;
   text-transform: uppercase;
-  letter-spacing: 0.16em;
-  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  font-size: 0.66rem;
   color: var(--accent-cool);
 }
 
@@ -90,17 +101,19 @@ body {
 
 .workspace {
   display: grid;
-  grid-template-columns: 300px minmax(500px, 1fr) 380px;
-  grid-template-rows: minmax(420px, 1fr) minmax(260px, 0.92fr);
+  grid-template-columns: 220px minmax(480px, 1fr) 280px;
+  /* Three rows: top panels, row-divider grabber, timeline. JS updates
+     --top-row-h on drag to resize the timeline. */
+  grid-template-rows: var(--top-row-h) 6px 1fr;
   gap: var(--grid-gap);
-  height: calc(100vh - 124px);
+  height: calc(100vh - 70px);
 }
 
 .panel {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  padding: 18px;
+  padding: 10px 12px;
   border: 1px solid var(--panel-border);
   border-radius: var(--radius-xl);
   background: linear-gradient(180deg, var(--bg-elevated), rgba(10, 18, 26, 0.94));
@@ -120,23 +133,51 @@ body {
 
 .inspector-panel {
   grid-column: 3;
-  grid-row: 1 / span 2;
-  gap: 16px;
+  grid-row: 1 / span 3;
+  gap: 10px;
   overflow-y: auto;
   scrollbar-gutter: stable;
 }
 
-.sequence-panel {
+.row-divider {
   grid-column: 1 / span 2;
   grid-row: 2;
+  height: 6px;
+  cursor: ns-resize;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+  position: relative;
+  transition: background 120ms ease;
+}
+
+.row-divider::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 40px;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 2px;
+  transform: translate(-50%, -50%);
+}
+
+.row-divider:hover,
+.row-divider.dragging {
+  background: rgba(255, 136, 91, 0.32);
+}
+
+.sequence-panel {
+  grid-column: 1 / span 2;
+  grid-row: 3;
 }
 
 .panel-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 10px;
+  margin-bottom: 8px;
 }
 
 .pill {
@@ -158,13 +199,180 @@ body {
   color: #ffd6bf;
 }
 
+/* Pill rendered as a <button> (zoom indicator). Looks identical to a static
+   pill but is hover-able + focusable so users discover that it's clickable. */
+.pill.pill-button {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.pill.pill-button:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-main);
+}
+
+/* ── Drag-and-drop overlay ─────────────────────────────────────────── */
+.dnd-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(7, 16, 23, 0.7);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  border: 4px dashed rgba(94, 182, 255, 0.6);
+}
+.dnd-overlay.hidden {
+  display: none;
+}
+.dnd-overlay-msg {
+  font-size: 22px;
+  font-weight: 600;
+  color: #fff;
+  padding: 22px 38px;
+  border-radius: 14px;
+  background: rgba(20, 32, 46, 0.85);
+  border: 1px solid rgba(94, 182, 255, 0.4);
+}
+
+/* ── Color swatches in clip context menu ──────────────────────────── */
+.color-swatch-row {
+  display: flex;
+  gap: 6px;
+  padding: 4px 12px 8px;
+  flex-wrap: wrap;
+}
+.color-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
+  cursor: pointer;
+  padding: 0;
+}
+.color-swatch:hover {
+  border-color: #fff;
+  transform: scale(1.1);
+}
+.color-swatch.active {
+  border-color: #fff;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35);
+}
+.color-swatch.clear {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+/* ── Inspector advanced section + hints ────────────────────────────── */
+.inspector-advanced {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 8px;
+  margin-top: 8px;
+}
+.inspector-advanced > summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-soft);
+  padding: 4px 0;
+  user-select: none;
+}
+.inspector-advanced > summary:hover {
+  color: var(--text-main);
+}
+.field-hint {
+  font-size: 11px;
+  color: var(--text-soft);
+  margin-left: 6px;
+}
+
+/* ── Program-monitor zoom chip ────────────────────────────────────── */
+.preview-zoom-pill {
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-family: inherit;
+  pointer-events: auto;
+}
+.preview-zoom-pill:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+.preview-zoom-pill.accent {
+  background: rgba(255, 136, 91, 0.22);
+  color: #ffd6bf;
+  border-color: rgba(255, 136, 91, 0.4);
+}
+
+/* ── Subtitle live overlay in preview ─────────────────────────────── */
+.preview-subtitle {
+  position: absolute;
+  /* Position is driven by CSS variables (--cue-x, --cue-y) so the user can
+     drag the cue anywhere over the preview. The cue is anchored at its
+     baseline-center so X=50%/Y=85% reads as "horizontally centered, near-
+     bottom" — matching burnt-in TV subtitle convention. */
+  left: var(--cue-x, 50%);
+  top: var(--cue-y, 85%);
+  transform: translate(-50%, -50%);
+  text-align: center;
+  z-index: 5;
+  pointer-events: none;
+  max-width: 90%;
+}
+.preview-subtitle .cue {
+  display: inline-block;
+  /* Pulled from a CSS var so the inspector slider can resize live. Falls back
+     to the clamp() value used before the slider was added. */
+  font-size: var(--cue-font-size, clamp(10px, 1.8vw, 18px));
+  font-weight: 600;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.65);
+  padding: 6px 14px;
+  border-radius: 6px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  white-space: pre-wrap;
+  line-height: 1.35;
+  /* The wrapper itself is pointer-events:none so it doesn't block clicks on
+     the timeline below; the .cue child opts back in so drag gestures work. */
+  pointer-events: auto;
+  cursor: grab;
+  user-select: none;
+}
+.preview-subtitle .cue:active { cursor: grabbing; }
+.preview-subtitle:empty { display: none; }
+
+/* Narrow modal variant for the simple Whisper generate dialog. */
+.modal-shell-narrow { max-width: 540px; }
+/* The default .modal-body declares display:grid with 2 columns. The subtitle-
+   generation modal needs a vertical stack so the progress bar isn't shoved
+   into a narrow right column. Compound selector wins on specificity. */
+.modal-body.modal-body-stack { display: flex; flex-direction: column; gap: 12px; }
+.modal-actions-right { justify-content: flex-end; }
+.subtle-note { color: var(--text-soft); font-size: 12px; }
+
+/* ── Bilingual label toggle (i18n) ──
+   Markup pattern: <span class="lang-zh">中文</span><span class="lang-en">English</span>
+   Body data-lang="zh" hides the English span; data-lang="en" hides the Chinese
+   one. Mixed-language labels with " / " separators don't get touched —
+   anything that needs language switching is wrapped in explicit spans. */
+body[data-lang="zh"] .lang-en { display: none !important; }
+body[data-lang="en"] .lang-zh { display: none !important; }
+.lang-select {
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  min-width: 90px;
+}
+
 .button {
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 999px;
-  padding: 11px 16px;
+  padding: 6px 12px;
   background: rgba(255, 255, 255, 0.04);
   color: var(--text-main);
   font: inherit;
+  font-size: 0.85rem;
   cursor: pointer;
   transition:
     transform 120ms ease,
@@ -227,8 +435,9 @@ body {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 14px;
+  gap: 6px;
+  padding: 8px 10px;
+  font-size: 0.85rem;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-lg);
   background: linear-gradient(135deg, rgba(20, 31, 43, 0.96), rgba(11, 22, 32, 0.82));
@@ -238,6 +447,10 @@ body {
     background 140ms ease;
   text-align: left;
   cursor: pointer;
+}
+
+.item-title strong {
+  font-size: 0.9rem !important;
 }
 
 .library-item:hover,
@@ -291,7 +504,7 @@ body {
 .preview-stage {
   position: relative;
   flex: 1;
-  min-height: 0;
+  min-height: 320px;
   overflow: hidden;
   border-radius: var(--radius-lg);
   background:
@@ -330,18 +543,24 @@ body {
 
 .monitor-controls {
   display: grid;
-  gap: 12px;
-  margin-top: 14px;
+  gap: 5px;
+  margin-top: 6px;
 }
 
 .transport-row {
   flex-wrap: wrap;
+  gap: 5px;
+}
+
+.transport-row .button {
+  padding: 4px 10px;
+  font-size: 0.78rem;
 }
 
 .scrub-row {
   display: grid;
   grid-template-columns: auto 1fr auto;
-  gap: 12px;
+  gap: 8px;
   align-items: center;
 }
 
@@ -352,24 +571,36 @@ body {
 
 .timecode {
   font-family: "Cascadia Mono", "Consolas", monospace;
-  font-size: 0.92rem;
+  font-size: 0.78rem;
   color: var(--text-main);
 }
 
+.monitor-metadata {
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.monitor-metadata .badge {
+  padding: 3px 7px;
+  font-size: 0.7rem;
+}
+
 .preview-hint {
-  margin-top: 14px;
+  margin-top: 4px;
+  font-size: 0.75rem;
   color: var(--text-soft);
 }
 
 .inspector-group {
-  padding: 16px;
+  padding: 10px 12px;
   border-radius: var(--radius-lg);
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.84rem;
 }
 
 .inspector-group + .inspector-group {
-  margin-top: 16px;
+  margin-top: 10px;
 }
 
 .export-group {
@@ -379,7 +610,7 @@ body {
 .stack {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 8px;
 }
 
 .hidden {
@@ -398,10 +629,11 @@ body {
   width: 100%;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-md);
-  padding: 11px 12px;
+  padding: 6px 9px;
   background: rgba(7, 16, 24, 0.82);
   color: var(--text-main);
   font: inherit;
+  font-size: 0.84rem;
 }
 
 .split-field {
@@ -451,10 +683,14 @@ body {
 
 .progress-track {
   width: 100%;
-  height: 12px;
+  height: 14px;
   border-radius: 999px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.06);
+  /* Higher contrast than the previous 0.06 alpha — at 0% fill the empty bar
+     was nearly invisible on the dark modal so the user couldn't tell the
+     progress widget existed at all. */
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .progress-fill {
@@ -462,13 +698,52 @@ body {
   height: 100%;
   background: linear-gradient(90deg, var(--accent-cool), var(--accent));
   transition: width 160ms ease;
+  /* A subtle inner shadow makes the fill read as "filled" even at thin widths
+     (e.g. 2-3% during the first second of a long transcribe run). */
+  box-shadow: inset 0 0 6px rgba(255, 255, 255, 0.18);
 }
 
 .progress-copy {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   gap: 12px;
   color: var(--text-soft);
+  min-width: 0;
+}
+
+/* Truncate the status line so very long log paths (e.g. "Writing subtitles to
+   C:\Users\…\subtitle-cache\run-9bd6e3…") don't push the ETA off-screen or
+   blow the modal's height. The full text is still in the DOM if needed. */
+#ytsubStatus {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ETA chip inside the subtitle-generation progress block — accent-coloured so
+   the user immediately sees how long is left without parsing the status text. */
+#ytsubEta {
+  flex: 0 0 auto;
+  color: var(--accent-strong);
+  font-family: "Cascadia Mono", "Consolas", monospace;
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.library-item-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.library-item-actions .button {
+  flex: 1;
+  padding: 8px 10px;
+  font-size: 0.82rem;
 }
 
 .sequence-item::before {
@@ -484,9 +759,212 @@ body {
   margin-left: 14px;
 }
 
+/* ── Multi-track timeline layout ── */
+.tl-container {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #111318;
+  border-radius: var(--radius-lg);
+}
+
+.tl-container.tl-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tl-headers {
+  width: 96px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: #14171d;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.tl-header-ruler {
+  width: 100%;
+  background: #1a1d24;
+  border-bottom: 1px solid #374151;
+}
+
+.tl-track-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px;
+  border-top: 1px solid #1f2937;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.tl-track-header:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.tl-track-header.selected {
+  background: rgba(94, 182, 255, 0.08);
+  color: var(--text-main);
+}
+
+.tl-track-name {
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-main);
+}
+
+.tl-track-flags {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.tl-track-flags button {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  font-size: 0.8rem;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.tl-track-flags button:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text-main);
+}
+
+.tl-add-row {
+  display: flex;
+  gap: 4px;
+  padding: 6px;
+  margin-top: auto;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.tl-add-btn {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  border-radius: 6px;
+  color: var(--text-muted);
+  padding: 4px 0;
+  font-size: 0.74rem;
+  cursor: pointer;
+}
+
+.tl-add-btn:hover {
+  background: rgba(94, 182, 255, 0.12);
+  color: var(--text-main);
+  border-color: rgba(94, 182, 255, 0.4);
+}
+
+.tl-scroll {
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+  min-width: 0;
+}
+
+/* Empty-state message renders inside the tl-container with no headers. */
+.tl-empty-msg {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  padding: 40px;
+}
+
+/* ── Timeline clip right-click context menu ── */
+.tl-context-menu {
+  position: fixed;
+  z-index: 1000;
+  min-width: 180px;
+  padding: 6px;
+  background: rgba(15, 22, 32, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(12px);
+}
+
+.tl-context-menu button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 7px 12px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-main);
+  font: inherit;
+  font-size: 0.86rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tl-context-menu button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.tl-context-menu button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.tl-context-menu .menu-shortcut {
+  margin-left: 12px;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+}
+
+.tl-context-menu .menu-divider {
+  height: 1px;
+  margin: 4px 6px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.tl-context-menu button.danger {
+  color: #ffd1d3;
+}
+
+.tl-context-menu button.danger:hover {
+  background: rgba(255, 109, 115, 0.18);
+}
+
+.tl-context-menu .menu-hint {
+  padding: 4px 12px 6px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.tl-context-menu .menu-label {
+  padding: 6px 12px 4px;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
 @media (max-width: 1440px) {
   .workspace {
-    grid-template-columns: 280px minmax(400px, 1fr) 340px;
+    grid-template-columns: 260px minmax(440px, 1fr) 320px;
   }
 }
 
@@ -531,6 +1009,258 @@ body {
   }
 
   .scrub-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Export modal (剪映-style) ── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(4, 8, 14, 0.78);
+  backdrop-filter: blur(6px);
+  animation: modal-fade-in 0.12s ease-out;
+}
+
+.modal-overlay.hidden {
+  display: none;
+}
+
+@keyframes modal-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.modal-shell {
+  width: min(760px, 94vw);
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  background: #15191f;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 22px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.modal-title-suffix {
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-left: 6px;
+}
+
+.modal-close {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.modal-close:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text-main);
+}
+
+.modal-body {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 22px;
+  padding: 20px 22px 8px;
+  overflow-y: auto;
+}
+
+.modal-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.modal-thumb {
+  aspect-ratio: 9 / 16;
+  border-radius: 10px;
+  background: linear-gradient(140deg, #1d2330 0%, #232b3a 100%);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-muted);
+}
+
+.modal-thumb-label {
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+}
+
+.modal-thumb-foot {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+
+.modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.modal-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 4px;
+}
+
+.modal-section {
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  padding: 12px 14px 6px;
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.modal-section-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  margin-bottom: 4px;
+}
+
+.modal-section-toggle input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #5eb6ff;
+  cursor: pointer;
+}
+
+.modal-section-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text-main);
+}
+
+.modal-section-hint {
+  margin: 2px 0 8px 26px;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.modal-section-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 14px;
+  padding: 4px 0 6px;
+}
+
+.modal-section.disabled .modal-section-body,
+.modal-section.disabled .modal-section-hint {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.modal-section-body .field {
+  margin: 0;
+}
+
+.modal-section-body .field.full {
+  grid-column: span 2;
+}
+
+.modal-advanced {
+  grid-column: span 2;
+  border-top: 1px dashed rgba(255, 255, 255, 0.08);
+  margin-top: 4px;
+  padding-top: 8px;
+}
+
+.modal-advanced summary {
+  cursor: pointer;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  padding: 4px 0;
+}
+
+.modal-advanced summary:hover {
+  color: var(--text-main);
+}
+
+.modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 22px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.modal-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.modal-summary strong {
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+.modal-summary em {
+  font-style: normal;
+  color: var(--text-muted);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 8px;
+}
+
+@media (max-width: 720px) {
+  .modal-body {
+    grid-template-columns: 1fr;
+  }
+  .modal-preview {
+    flex-direction: row;
+    gap: 14px;
+  }
+  .modal-thumb {
+    aspect-ratio: 9 / 16;
+    width: 100px;
+    flex-shrink: 0;
+  }
+  .modal-section-body {
     grid-template-columns: 1fr;
   }
 }

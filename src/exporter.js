@@ -12,13 +12,29 @@ const DEFAULT_EXPORT_SETTINGS = Object.freeze({
   audioBitrate: "192k",
   renderMode: "force-gpu",
   videoBitrate: "auto",
+  videoCodec: "h264",
 });
 
-const SOFTWARE_ENCODER = Object.freeze({
-  name: "libx264",
-  label: "Software x264",
-  type: "software",
+const SUPPORTED_VIDEO_CODECS = Object.freeze(["h264", "hevc"]);
+
+const SOFTWARE_ENCODERS_BY_CODEC = Object.freeze({
+  h264: Object.freeze({
+    name: "libx264",
+    label: "Software x264",
+    type: "software",
+    codec: "h264",
+  }),
+  hevc: Object.freeze({
+    name: "libx265",
+    label: "Software x265 (HEVC)",
+    type: "software",
+    codec: "hevc",
+  }),
 });
+
+// Default exposed for downstream tests / legacy callers that imported the
+// constant directly.
+const SOFTWARE_ENCODER = SOFTWARE_ENCODERS_BY_CODEC.h264;
 
 const HARDWARE_ENCODER_CANDIDATES = Object.freeze([
   {
@@ -26,6 +42,7 @@ const HARDWARE_ENCODER_CANDIDATES = Object.freeze([
     label: "NVIDIA NVENC H.264",
     type: "hardware",
     vendor: "nvidia",
+    codec: "h264",
     retryPattern: /nvenc|nvidia|cuda|device|driver/i,
   },
   {
@@ -33,6 +50,7 @@ const HARDWARE_ENCODER_CANDIDATES = Object.freeze([
     label: "Intel Quick Sync H.264",
     type: "hardware",
     vendor: "intel",
+    codec: "h264",
     retryPattern: /qsv|quick sync|mfx|device|unsupported/i,
   },
   {
@@ -40,6 +58,7 @@ const HARDWARE_ENCODER_CANDIDATES = Object.freeze([
     label: "AMD AMF H.264",
     type: "hardware",
     vendor: "amd",
+    codec: "h264",
     retryPattern: /amf|amd|device|driver/i,
   },
   {
@@ -47,9 +66,47 @@ const HARDWARE_ENCODER_CANDIDATES = Object.freeze([
     label: "Windows Media Foundation H.264",
     type: "hardware",
     vendor: "windows",
+    codec: "h264",
+    retryPattern: /media foundation|mediafoundation|\bmf\b/i,
+  },
+  {
+    name: "hevc_nvenc",
+    label: "NVIDIA NVENC H.265",
+    type: "hardware",
+    vendor: "nvidia",
+    codec: "hevc",
+    retryPattern: /nvenc|nvidia|cuda|device|driver/i,
+  },
+  {
+    name: "hevc_qsv",
+    label: "Intel Quick Sync H.265",
+    type: "hardware",
+    vendor: "intel",
+    codec: "hevc",
+    retryPattern: /qsv|quick sync|mfx|device|unsupported/i,
+  },
+  {
+    name: "hevc_amf",
+    label: "AMD AMF H.265",
+    type: "hardware",
+    vendor: "amd",
+    codec: "hevc",
+    retryPattern: /amf|amd|device|driver/i,
+  },
+  {
+    name: "hevc_mf",
+    label: "Windows Media Foundation H.265",
+    type: "hardware",
+    vendor: "windows",
+    codec: "hevc",
     retryPattern: /media foundation|mediafoundation|\bmf\b/i,
   },
 ]);
+
+function normalizeVideoCodec(value) {
+  const codec = String(value || "").toLowerCase();
+  return SUPPORTED_VIDEO_CODECS.includes(codec) ? codec : DEFAULT_EXPORT_SETTINGS.videoCodec;
+}
 
 const HARDWARE_VIDEO_PIPELINE_CANDIDATES = Object.freeze([
   {
@@ -86,6 +143,7 @@ function normalizeExportSettings(settings) {
     audioBitrate: normalizeAudioBitrate(settings.audioBitrate),
     renderMode: normalizeRenderMode(settings.renderMode),
     videoBitrate: normalizeVideoBitrate(settings.videoBitrate),
+    videoCodec: normalizeVideoCodec(settings.videoCodec),
   };
 }
 
@@ -347,14 +405,17 @@ function buildVideoFilterChain({ inputTag = "", outputTag = "", settings, videoP
 
 function buildVideoEncoderArgs(settings, encoder, videoBitrateKbps) {
   const args = ["-c:v", encoder.name];
+  const isSoftware = encoder.type === "software";
+  const isNvenc = encoder.name === "h264_nvenc" || encoder.name === "hevc_nvenc";
+  const isHevc = (encoder.codec || "h264") === "hevc";
 
-  if (encoder.name === SOFTWARE_ENCODER.name) {
+  if (isSoftware) {
     args.push("-preset", settings.videoPreset);
-  } else if (encoder.name === "h264_nvenc") {
+  } else if (isNvenc) {
     args.push("-preset", mapNvencPreset(settings.videoPreset));
   }
 
-  if (encoder.name === SOFTWARE_ENCODER.name && settings.videoBitrate === "auto") {
+  if (isSoftware && settings.videoBitrate === "auto") {
     args.push("-crf", String(settings.crf));
   } else {
     const maxrate = Math.round(videoBitrateKbps * 1.15);
@@ -365,6 +426,12 @@ function buildVideoEncoderArgs(settings, encoder, videoBitrateKbps) {
   }
 
   args.push("-pix_fmt", "yuv420p");
+  if (isHevc) {
+    // Tag HEVC streams as hvc1 inside MP4 so QuickTime / iOS / mainstream
+    // players recognize them. The default hev1 tag plays in VLC but not in
+    // Apple ecosystems.
+    args.push("-tag:v", "hvc1");
+  }
   return args;
 }
 
@@ -381,15 +448,17 @@ function summarizeHardwareProbeError(message) {
   return normalized.length > 180 ? `${normalized.slice(0, 177)}...` : normalized;
 }
 
-function buildHardwareAvailabilitySuffix(capabilities) {
+function buildHardwareAvailabilitySuffix(capabilities, codecFilter = null) {
+  const filterMatch = (encoder) => !codecFilter || (encoder.codec || "h264") === codecFilter;
   const usableHardwareLabels = (capabilities?.availableHardwareEncoders || [])
+    .filter(filterMatch)
     .map((encoder) => encoder.label)
     .join(", ");
   if (usableHardwareLabels) {
     return ` Usable encoders: ${usableHardwareLabels}.`;
   }
 
-  const unusableHardwareEncoders = capabilities?.unusableHardwareEncoders || [];
+  const unusableHardwareEncoders = (capabilities?.unusableHardwareEncoders || []).filter(filterMatch);
   if (unusableHardwareEncoders.length > 0) {
     const details = unusableHardwareEncoders
       .map((encoder) => `${encoder.label} (${encoder.probeError || "initialization failed"})`)
@@ -397,7 +466,10 @@ function buildHardwareAvailabilitySuffix(capabilities) {
     return ` FFmpeg reported these GPU encoders, but they could not be initialized on this machine: ${details}.`;
   }
 
-  return " No supported H.264 GPU encoder was detected by FFmpeg.";
+  const codecLabel = codecFilter === "hevc" ? "H.265" : codecFilter === "h264" ? "H.264" : "";
+  return codecLabel
+    ? ` No supported ${codecLabel} GPU encoder was detected by FFmpeg.`
+    : " No supported GPU encoder was detected by FFmpeg.";
 }
 
 function selectEncoder(settings, capabilities, preferredEncoder = null) {
@@ -405,21 +477,42 @@ function selectEncoder(settings, capabilities, preferredEncoder = null) {
     return preferredEncoder;
   }
 
+  const targetCodec = settings.videoCodec || DEFAULT_EXPORT_SETTINGS.videoCodec;
+  const softwareEncoder = SOFTWARE_ENCODERS_BY_CODEC[targetCodec] || SOFTWARE_ENCODER;
+
   if (settings.renderMode === "software") {
-    return SOFTWARE_ENCODER;
+    return softwareEncoder;
   }
 
-  if (capabilities?.detectedHardwareEncoder) {
-    return capabilities.detectedHardwareEncoder;
+  const hardwareEncoder = pickHardwareEncoderForCodec(capabilities, targetCodec);
+  if (hardwareEncoder) {
+    return hardwareEncoder;
   }
 
   if (settings.renderMode === "force-gpu") {
+    const codecLabel = targetCodec === "hevc" ? "H.265" : "H.264";
     throw new Error(
-      `Force GPU rendering is enabled, but a usable GPU H.264 encoder is not available.${buildHardwareAvailabilitySuffix(capabilities)} Switch to Auto GPU or Software render mode, or update the GPU driver/runtime and try again.`,
+      `Force GPU rendering is enabled, but a usable GPU ${codecLabel} encoder is not available.${buildHardwareAvailabilitySuffix(capabilities, targetCodec)} Switch to Auto GPU or Software render mode, or update the GPU driver/runtime and try again.`,
     );
   }
 
-  return SOFTWARE_ENCODER;
+  return softwareEncoder;
+}
+
+function pickHardwareEncoderForCodec(capabilities, targetCodec) {
+  const available = Array.isArray(capabilities?.availableHardwareEncoders)
+    ? capabilities.availableHardwareEncoders
+    : [];
+  const codecMatch = available.find((encoder) => (encoder.codec || "h264") === targetCodec);
+  if (codecMatch) {
+    return codecMatch;
+  }
+  // Backward compat: when capabilities was generated before the codec field
+  // existed, the only detected encoder corresponds to H.264.
+  if (targetCodec === "h264" && capabilities?.detectedHardwareEncoder) {
+    return capabilities.detectedHardwareEncoder;
+  }
+  return null;
 }
 
 function selectVideoPipeline(capabilities, encoder, preferredVideoPipeline = null) {
@@ -505,7 +598,7 @@ async function probeHardwareEncoder(ffmpegPath, encoder) {
       "-an",
       "-c:v",
       encoder.name,
-      ...(encoder.name === "h264_nvenc" ? ["-preset", "p4"] : []),
+      ...((encoder.name === "h264_nvenc" || encoder.name === "hevc_nvenc") ? ["-preset", "p4"] : []),
       "-f",
       "null",
       "-",
@@ -549,7 +642,7 @@ async function probeHardwareVideoPipeline(ffmpegPath, encoder, pipeline) {
       "-an",
       "-c:v",
       encoder.name,
-      ...(encoder.name === "h264_nvenc" ? ["-preset", "p4"] : []),
+      ...((encoder.name === "h264_nvenc" || encoder.name === "hevc_nvenc") ? ["-preset", "p4"] : []),
       "-f",
       "null",
       "-",
@@ -717,7 +810,55 @@ function buildExportPlan(clips, rawSettings, options = {}) {
     throw new Error("Add at least one clip to the sequence before exporting.");
   }
 
+  // Normalize A-track audio entries. Independent of the V-track concat —
+  // each entry plays at an explicit timelineStart and gets mixed into the
+  // final audio bus alongside V-clip audio.
+  const audioTrack = Array.isArray(options.audioClips) ? options.audioClips : [];
+  const normalizedAudioClips = audioTrack
+    .filter((c) => c && c.path && c.hasAudio !== false)
+    .map((c, i) => {
+      const srcDur = Number(c.sourceDuration || 0);
+      const tS = clampNumber(c.trimStart, 0, Math.max(srcDur, 0));
+      const tE = clampNumber(
+        c.trimEnd,
+        Math.min(srcDur, tS + 0.1),
+        Math.max(srcDur, tS + 0.1),
+      );
+      const dur = Number((tE - tS).toFixed(3));
+      const ts = Number((Number(c.timelineStart) || 0).toFixed(3));
+      if (!Number.isFinite(dur) || dur <= 0) {
+        throw new Error(`Audio clip ${i + 1} has no playable duration.`);
+      }
+      return {
+        path: c.path,
+        name: c.name || path.basename(c.path),
+        trimStart: tS,
+        trimEnd: tE,
+        duration: dur,
+        timelineStart: Math.max(0, ts),
+      };
+    });
+
   const normalizedClips = clips.map((clip, index) => {
+    // Synthetic black-filler entry — used to bridge gaps between V clips that
+    // are no longer edge-to-edge after the user drags. No ffmpeg input is
+    // produced; the filter graph generates the stream from lavfi sources.
+    if (clip?.isBlackFiller) {
+      const dur = Number(((Number(clip.trimEnd) || 0) - (Number(clip.trimStart) || 0)).toFixed(3));
+      if (!Number.isFinite(dur) || dur <= 0) {
+        throw new Error(`Gap filler ${index + 1} has no playable duration.`);
+      }
+      return {
+        isBlackFiller: true,
+        path: null,
+        name: clip.name || "(gap)",
+        trimStart: 0,
+        trimEnd: dur,
+        duration: dur,
+        hasAudio: false,
+        hasVideo: true,
+      };
+    }
     if (!clip?.path) {
       throw new Error(`Clip ${index + 1} is missing a file path.`);
     }
@@ -747,7 +888,7 @@ function buildExportPlan(clips, rawSettings, options = {}) {
   });
 
   normalizedClips.forEach((clip) => {
-    if (!clip.hasVideo) {
+    if (!clip.hasVideo && !clip.isBlackFiller) {
       throw new Error(`"${clip.name}" does not contain a video stream.`);
     }
   });
@@ -778,42 +919,99 @@ function buildExportPlan(clips, rawSettings, options = {}) {
   );
 
   const args = ["-y"];
+  // Track each clip's ffmpeg input index (or null for filler entries, which
+  // are produced inside the filter graph via lavfi sources and don't add a
+  // `-i` argument).
+  const clipInputIndex = [];
+  let inputIdx = 0;
   normalizedClips.forEach((clip) => {
+    if (clip.isBlackFiller) {
+      clipInputIndex.push(null);
+      return;
+    }
     args.push("-ss", formatSeconds(clip.trimStart));
     args.push("-t", formatSeconds(clip.duration));
     args.push("-i", clip.path);
+    clipInputIndex.push(inputIdx);
+    inputIdx += 1;
+  });
+  // A-track inputs come after V-clip inputs; we capture the starting input
+  // index so the A-clip filter chain references the right `-i`.
+  const audioInputBase = inputIdx;
+  normalizedAudioClips.forEach((aClip) => {
+    args.push("-ss", formatSeconds(aClip.trimStart));
+    args.push("-t", formatSeconds(aClip.duration));
+    args.push("-i", aClip.path);
+    inputIdx += 1;
   });
 
   const graphSegments = [];
   const concatInputs = [];
 
   normalizedClips.forEach((clip, index) => {
-    graphSegments.push(
-      buildVideoFilterChain({
-        inputTag: `[${index}:v]`,
-        outputTag: `v${index}`,
-        settings,
-        videoPipeline,
-      }),
-    );
-
-    if (clip.hasAudio) {
+    if (clip.isBlackFiller) {
+      // Black video filler — pure lavfi source matching the output canvas.
       graphSegments.push(
-        `[${index}:a]aformat=channel_layouts=stereo:sample_rates=48000:sample_fmts=fltp,` +
-          `aresample=48000,atrim=duration=${formatSeconds(clip.duration)},asetpts=PTS-STARTPTS[a${index}]`,
+        `color=c=black:s=${settings.width}x${settings.height}:r=${settings.fps}:d=${formatSeconds(clip.duration)},format=yuv420p,setsar=1,setpts=PTS-STARTPTS[v${index}]`,
       );
-    } else {
+      // Silence for the same duration.
       graphSegments.push(
         `anullsrc=r=48000:cl=stereo,atrim=duration=${formatSeconds(clip.duration)},asetpts=PTS-STARTPTS[a${index}]`,
       );
+    } else {
+      const realIdx = clipInputIndex[index];
+      graphSegments.push(
+        buildVideoFilterChain({
+          inputTag: `[${realIdx}:v]`,
+          outputTag: `v${index}`,
+          settings,
+          videoPipeline,
+        }),
+      );
+      if (clip.hasAudio) {
+        graphSegments.push(
+          `[${realIdx}:a]aformat=channel_layouts=stereo:sample_rates=48000:sample_fmts=fltp,` +
+            `aresample=48000,atrim=duration=${formatSeconds(clip.duration)},asetpts=PTS-STARTPTS[a${index}]`,
+        );
+      } else {
+        graphSegments.push(
+          `anullsrc=r=48000:cl=stereo,atrim=duration=${formatSeconds(clip.duration)},asetpts=PTS-STARTPTS[a${index}]`,
+        );
+      }
     }
-
     concatInputs.push(`[v${index}]`, `[a${index}]`);
   });
 
+  // V-track concat → [vout] (video) + [vConcatA] (audio bus from embedded V audio)
+  const concatAudioOutTag = normalizedAudioClips.length > 0 ? "vConcatA" : "aout";
   graphSegments.push(
-    `${concatInputs.join("")}concat=n=${normalizedClips.length}:v=1:a=1[vout][aout]`,
+    `${concatInputs.join("")}concat=n=${normalizedClips.length}:v=1:a=1[vout][${concatAudioOutTag}]`,
   );
+
+  // Build delayed A-track streams and mix them with the V-track audio bus.
+  // A-track inputs come AFTER all real V-clip inputs (fillers don't add
+  // inputs), so we offset by `audioInputBase`, not `normalizedClips.length`.
+  if (normalizedAudioClips.length > 0) {
+    normalizedAudioClips.forEach((aClip, i) => {
+      const aInputIdx = audioInputBase + i;
+      const delayMs = Math.round(aClip.timelineStart * 1000);
+      const delayPart = delayMs > 0 ? `,adelay=${delayMs}|${delayMs}` : "";
+      graphSegments.push(
+        `[${aInputIdx}:a]aformat=channel_layouts=stereo:sample_rates=48000:sample_fmts=fltp,` +
+          `aresample=48000,atrim=duration=${formatSeconds(aClip.duration)},` +
+          `asetpts=PTS-STARTPTS${delayPart}[A${i}]`,
+      );
+    });
+    // amix sums the V audio bus + every A-track delayed stream. normalize=0
+    // preserves source loudness; users manage gain via per-clip volume (TBD).
+    // dropout_transition=0 stops the gain from rising when shorter streams end.
+    const mixInputs = [`[${concatAudioOutTag}]`]
+      .concat(normalizedAudioClips.map((_, i) => `[A${i}]`))
+      .join("");
+    graphSegments.push(
+      `${mixInputs}amix=inputs=${normalizedAudioClips.length + 1}:duration=longest:dropout_transition=0:normalize=0[aout]`,
+    );
+  }
 
   args.push("-filter_complex", graphSegments.join(";"));
   args.push("-map", "[vout]", "-map", "[aout]");
@@ -844,9 +1042,9 @@ function buildExportPlan(clips, rawSettings, options = {}) {
   };
 }
 
-function summarizeExportSettings({ clips, settings, ffmpegPath }) {
+function summarizeExportSettings({ clips, audioClips, settings, ffmpegPath }) {
   return getRenderCapabilities(ffmpegPath).then((capabilities) => {
-    const plan = buildExportPlan(clips, settings, { capabilities });
+    const plan = buildExportPlan(clips, settings, { capabilities, audioClips });
     return {
       width: plan.settings.width,
       height: plan.settings.height,
@@ -1005,13 +1203,13 @@ function executeExportPlan({ ffmpegPath, plan, outputPath, onProgress }) {
   });
 }
 
-async function runExport({ clips, outputPath, settings, ffmpegPath, onProgress }) {
+async function runExport({ clips, audioClips, outputPath, settings, ffmpegPath, onProgress }) {
   if (!outputPath) {
     throw new Error("Choose an export destination before rendering.");
   }
 
   const capabilities = await getRenderCapabilities(ffmpegPath);
-  const preferredPlan = buildExportPlan(clips, settings, { capabilities });
+  const preferredPlan = buildExportPlan(clips, settings, { capabilities, audioClips });
 
   try {
     return await executeExportPlan({
@@ -1039,6 +1237,7 @@ async function runExport({ clips, outputPath, settings, ffmpegPath, onProgress }
       },
       {
         capabilities,
+        audioClips,
         preferredEncoder: SOFTWARE_ENCODER,
       },
     );
@@ -1072,16 +1271,20 @@ async function runExport({ clips, outputPath, settings, ffmpegPath, onProgress }
   }
 }
 
-async function preparePreviewMedia({ inputPath, ffmpegPath, cacheDir }) {
+async function preparePreviewMedia({ inputPath, ffmpegPath, ffprobePath, cacheDir }) {
   if (!inputPath) {
     throw new Error("Choose a source clip before preparing a preview.");
   }
 
   await fs.promises.mkdir(cacheDir, { recursive: true });
   const stats = await fs.promises.stat(inputPath);
+  // Cache key includes the proxy-codec version so a code change forces a
+  // regeneration instead of reusing a stale (slow / large) old proxy. Bumped
+  // to v4 because resolution was raised from 1024 to 1440 for sharper preview.
+  const PROXY_CODEC_VERSION = "v4-ultrafast-1440p-safe";
   const cacheKey = crypto
     .createHash("sha1")
-    .update(`${inputPath}:${stats.size}:${stats.mtimeMs}`)
+    .update(`${inputPath}:${stats.size}:${stats.mtimeMs}:${PROXY_CODEC_VERSION}`)
     .digest("hex");
   const outputPath = path.join(cacheDir, `${cacheKey}.mp4`);
 
@@ -1094,46 +1297,312 @@ async function preparePreviewMedia({ inputPath, ffmpegPath, cacheDir }) {
     // Cache miss, continue.
   }
 
-  await new Promise((resolve, reject) => {
-    const ffmpeg = spawn(
-      ffmpegPath,
-      [
-        "-y",
-        "-i",
-        inputPath,
-        "-map",
-        "0:v:0",
-        "-map",
-        "0:a:0?",
-        "-c:v",
-        "libx264",
-        "-preset",
-        "veryfast",
-        "-crf",
-        "28",
-        "-pix_fmt",
-        "yuv420p",
-        "-c:a",
-        "aac",
-        "-b:a",
-        "128k",
-        "-movflags",
-        "+faststart",
-        outputPath,
-      ],
-      {
-        windowsHide: true,
-      },
-    );
+  // Probe the source duration up front so we can verify the proxy isn't
+  // truncated after ffmpeg returns. Truncated proxies have been the recurring
+  // bug: a multi-hour source ends up cached as a 3-minute file because some
+  // earlier ffmpeg flag caused it to bail silently.
+  let sourceDurationSeconds = 0;
+  if (ffprobePath) {
+    try {
+      const probe = await probeMedia(inputPath, ffprobePath);
+      sourceDurationSeconds = Number(probe.duration) || 0;
+    } catch {
+      // Couldn't probe — skip verification rather than fail the proxy entirely.
+    }
+  }
 
+  // Write to a .tmp file and atomically rename on success — that way a crash
+  // or interrupted run never leaves a partial proxy in the cache that would
+  // later be served as if complete (showing only the first few minutes of a
+  // long video, which is exactly the symptom users hit).
+  const tempPath = `${outputPath}.tmp`;
+  try {
+    await fs.promises.unlink(tempPath);
+  } catch {
+    // No stale tmp, fine.
+  }
+
+  try {
+    await new Promise((resolve, reject) => {
+      // Proxy strategy: downscale aggressively (max 1024px on the long edge),
+      // ultrafast preset, tune for fast decode, and force tight ~1s GOPs so
+      // the <video> element can seek instantly. The second scale pass
+      // guarantees even dimensions for x264. +genpts and avoid_negative_ts
+      // make the proxy robust against sources with sketchy timestamps that
+      // would otherwise cause ffmpeg to bail or produce un-seekable output.
+      // We DO NOT pass -vsync vfr / +igndts / -err_detect ignore_err here —
+      // those triggered silent mid-stream stops that produced truncated
+      // proxies on long recordings.
+      const ffmpeg = spawn(
+        ffmpegPath,
+        [
+          "-y",
+          "-fflags",
+          "+genpts",
+          "-i",
+          inputPath,
+          "-map",
+          "0:v:0",
+          "-map",
+          "0:a:0?",
+          "-vf",
+          "scale=1440:1440:force_original_aspect_ratio=decrease,scale=trunc(iw/2)*2:trunc(ih/2)*2:flags=fast_bilinear,format=yuv420p",
+          "-c:v",
+          "libx264",
+          "-preset",
+          "ultrafast",
+          "-tune",
+          "fastdecode",
+          "-crf",
+          "28",
+          "-g",
+          "30",
+          "-keyint_min",
+          "30",
+          "-sc_threshold",
+          "0",
+          "-c:a",
+          "aac",
+          "-b:a",
+          "96k",
+          "-ac",
+          "2",
+          "-avoid_negative_ts",
+          "make_zero",
+          "-movflags",
+          "+faststart",
+          "-threads",
+          "0",
+          tempPath,
+        ],
+        {
+          windowsHide: true,
+        },
+      );
+
+      let stderr = "";
+
+      ffmpeg.stderr.on("data", (chunk) => {
+        stderr += chunk.toString();
+      });
+
+      ffmpeg.on("error", (error) => {
+        reject(new Error(`Unable to prepare preview media: ${error.message}`));
+      });
+
+      ffmpeg.on("close", (code) => {
+        if (code !== 0) {
+          reject(new Error(stderr.trim() || `FFmpeg exited with code ${code}`));
+          return;
+        }
+
+        resolve();
+      });
+    });
+
+    // Post-generation duration check: if the proxy is materially shorter than
+    // the source, reject it instead of caching a broken file. The user's
+    // symptom — "1.5 hr source, monitor shows 3 minutes" — is exactly this.
+    if (ffprobePath && sourceDurationSeconds > 5) {
+      try {
+        const proxyProbe = await probeMedia(tempPath, ffprobePath);
+        const proxyDuration = Number(proxyProbe.duration) || 0;
+        const minAcceptable = sourceDurationSeconds * 0.9;
+        if (proxyDuration < minAcceptable) {
+          throw new Error(
+            `Preview proxy looked truncated (${proxyDuration.toFixed(1)}s out of ${sourceDurationSeconds.toFixed(1)}s) and was rejected.`,
+          );
+        }
+      } catch (probeError) {
+        // If the message we synthesized above bubbled up, surface it as-is.
+        if (probeError && probeError.message && probeError.message.includes("truncated")) {
+          throw probeError;
+        }
+        // Otherwise the probe itself failed; treat as opaque proxy issue.
+      }
+    }
+
+    await fs.promises.rename(tempPath, outputPath);
+  } catch (error) {
+    try {
+      await fs.promises.unlink(tempPath);
+    } catch {
+      // best-effort cleanup
+    }
+    throw error;
+  }
+
+  return outputPath;
+}
+
+// FFmpeg codec + extension matrix for audio-only export. WAV is uncompressed
+// PCM so bitrate is ignored; AAC + MP3 honor the user's bitrate selection.
+const AUDIO_EXPORT_FORMATS = Object.freeze({
+  m4a: { codec: "aac", label: "AAC audio", honorsBitrate: true },
+  mp3: { codec: "libmp3lame", label: "MP3 audio", honorsBitrate: true },
+  wav: { codec: "pcm_s16le", label: "WAV / PCM audio", honorsBitrate: false },
+});
+
+function resolveAudioExportFormat(audioFormat) {
+  const key = String(audioFormat || "m4a").toLowerCase();
+  return AUDIO_EXPORT_FORMATS[key] ? key : "m4a";
+}
+
+// Audio-only export: concatenate the audio portion of each timeline clip
+// (respecting trims and the per-clip mute / detach-audio toggle) into a
+// single audio file. Independent of the video export pipeline so it stays
+// simple and fast.
+const SUPPORTED_AUDIO_SAMPLE_RATES = Object.freeze([22050, 32000, 44100, 48000, 96000]);
+
+function normalizeSampleRate(value) {
+  const numeric = Number.parseInt(value, 10);
+  return SUPPORTED_AUDIO_SAMPLE_RATES.includes(numeric) ? numeric : 48000;
+}
+
+async function runAudioExport({ clips, audioClips, outputPath, audioFormat, audioBitrate, sampleRate, ffmpegPath, onProgress }) {
+  if (!outputPath) {
+    throw new Error("Choose an export destination before rendering audio.");
+  }
+  if (!Array.isArray(clips) || clips.length === 0) {
+    throw new Error("Add at least one clip to the sequence before exporting audio.");
+  }
+
+  const formatKey = resolveAudioExportFormat(audioFormat);
+  const formatInfo = AUDIO_EXPORT_FORMATS[formatKey];
+  const bitrate = normalizeAudioBitrate(audioBitrate);
+  const sr = normalizeSampleRate(sampleRate);
+  const aTrack = Array.isArray(audioClips) ? audioClips.filter((c) => c && c.path) : [];
+
+  const inputArgs = [];
+  const filterParts = [];
+  const concatInputs = [];
+  // Explicit input-index counter — the old code computed it from
+  // inputArgs.length/2-1 which breaks when lavfi adds extra flags (6 args
+  // instead of 2 for one input).
+  let inputIdx = 0;
+
+  clips.forEach((clip, i) => {
+    // Filler entries from the renderer's V-gap insertion: pure silence for
+    // the gap duration; no source path needed.
+    if (clip?.isBlackFiller) {
+      const dur = Math.max(0.001, (Number(clip.trimEnd) || 0) - (Number(clip.trimStart) || 0));
+      inputArgs.push(
+        "-f", "lavfi", "-t", dur.toFixed(3), "-i", "anullsrc=channel_layout=stereo:sample_rate=48000",
+      );
+      filterParts.push(`[${inputIdx}:a]asetpts=PTS-STARTPTS[a${i}]`);
+      concatInputs.push(`[a${i}]`);
+      inputIdx += 1;
+      return;
+    }
+    if (!clip?.path) {
+      throw new Error(`Clip ${i + 1} is missing a file path.`);
+    }
+    const trimStart = Number(clip.trimStart) || 0;
+    const trimEnd = Number(clip.trimEnd) || (Number(clip.sourceDuration) || 0);
+    const duration = Math.max(0.001, trimEnd - trimStart);
+    if (clip.hasAudio) {
+      inputArgs.push("-i", clip.path);
+      filterParts.push(
+        `[${inputIdx}:a]atrim=start=${trimStart}:end=${trimEnd},asetpts=PTS-STARTPTS,aresample=async=1:first_pts=0[a${i}]`,
+      );
+    } else {
+      // lavfi-generated silence for muted / silent V clips so the concat keeps
+      // the right total runtime.
+      inputArgs.push(
+        "-f", "lavfi", "-t", duration.toFixed(3), "-i", "anullsrc=channel_layout=stereo:sample_rate=48000",
+      );
+      filterParts.push(`[${inputIdx}:a]asetpts=PTS-STARTPTS[a${i}]`);
+    }
+    concatInputs.push(`[a${i}]`);
+    inputIdx += 1;
+  });
+
+  // V-track audio concat → either final output or mixed with A-track audios.
+  const concatOutTag = aTrack.length > 0 ? "vConcatA" : "outa";
+  filterParts.push(
+    `${concatInputs.join("")}concat=n=${clips.length}:v=0:a=1[${concatOutTag}]`,
+  );
+
+  // A-track audio clips: add inputs + delay each to its timelineStart.
+  if (aTrack.length > 0) {
+    aTrack.forEach((aClip, j) => {
+      const tS = Number(aClip.trimStart) || 0;
+      const tE = Number(aClip.trimEnd) || (Number(aClip.sourceDuration) || 0);
+      const dur = Math.max(0.001, tE - tS).toFixed(3);
+      inputArgs.push("-ss", tS.toFixed(3), "-t", dur, "-i", aClip.path);
+      const delayMs = Math.round(Math.max(0, Number(aClip.timelineStart) || 0) * 1000);
+      const delayPart = delayMs > 0 ? `,adelay=${delayMs}|${delayMs}` : "";
+      filterParts.push(
+        `[${inputIdx}:a]aformat=channel_layouts=stereo:sample_rates=48000:sample_fmts=fltp,` +
+          `aresample=48000,asetpts=PTS-STARTPTS${delayPart}[A${j}]`,
+      );
+      inputIdx += 1;
+    });
+    const mixInputs = [`[${concatOutTag}]`].concat(aTrack.map((_, j) => `[A${j}]`)).join("");
+    filterParts.push(
+      `${mixInputs}amix=inputs=${aTrack.length + 1}:duration=longest:dropout_transition=0:normalize=0[outa]`,
+    );
+  }
+
+  const filterComplex = filterParts.join(";");
+  const vDuration = clips.reduce(
+    (sum, c) => sum + Math.max(0, (Number(c.trimEnd) || 0) - (Number(c.trimStart) || 0)),
+    0,
+  );
+  const aTrackEnd = aTrack.reduce((max, c) => {
+    const ts = Number(c.timelineStart) || 0;
+    const tE = Number(c.trimEnd) || 0;
+    const tS = Number(c.trimStart) || 0;
+    return Math.max(max, ts + Math.max(0, tE - tS));
+  }, 0);
+  const totalDuration = Math.max(vDuration, aTrackEnd);
+
+  const args = [
+    "-y",
+    ...inputArgs,
+    "-filter_complex",
+    filterComplex,
+    "-map",
+    "[outa]",
+    "-c:a",
+    formatInfo.codec,
+  ];
+  if (formatInfo.honorsBitrate) {
+    args.push("-b:a", bitrate);
+  }
+  args.push("-ar", String(sr), "-ac", "2");
+  // MP4/M4A containers benefit from faststart; MP3/WAV ignore the flag without
+  // erroring, but we omit it to keep the command minimal for non-MP4 outputs.
+  if (formatKey === "m4a") {
+    args.push("-movflags", "+faststart");
+  }
+  args.push(outputPath);
+
+  await new Promise((resolve, reject) => {
+    const ffmpeg = spawn(ffmpegPath, args, { windowsHide: true });
     let stderr = "";
 
     ffmpeg.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
+      const text = chunk.toString();
+      stderr += text;
+      if (typeof onProgress === "function") {
+        const m = /time=(\d+):(\d+):(\d+(?:\.\d+)?)/.exec(text);
+        if (m) {
+          const seconds = Number(m[1]) * 3600 + Number(m[2]) * 60 + Number(m[3]);
+          onProgress({
+            percent: totalDuration > 0 ? Math.min(99, (seconds / totalDuration) * 100) : 0,
+            status: "rendering",
+            currentTimeSeconds: seconds,
+            totalDuration,
+            encoderLabel: formatInfo.label,
+            pipelineLabel: `Audio export (${formatKey.toUpperCase()})`,
+          });
+        }
+      }
     });
 
     ffmpeg.on("error", (error) => {
-      reject(new Error(`Unable to prepare preview media: ${error.message}`));
+      reject(new Error(`Unable to export audio: ${error.message}`));
     });
 
     ffmpeg.on("close", (code) => {
@@ -1141,12 +1610,30 @@ async function preparePreviewMedia({ inputPath, ffmpegPath, cacheDir }) {
         reject(new Error(stderr.trim() || `FFmpeg exited with code ${code}`));
         return;
       }
-
       resolve();
     });
   });
 
-  return outputPath;
+  const stats = await fs.promises.stat(outputPath);
+  if (typeof onProgress === "function") {
+    onProgress({
+      percent: 100,
+      status: "done",
+      currentTimeSeconds: totalDuration,
+      totalDuration,
+      encoderLabel: formatInfo.label,
+      pipelineLabel: `Audio export (${formatKey.toUpperCase()})`,
+    });
+  }
+  return {
+    outputPath,
+    outputSizeBytes: stats.size,
+    outputSizeLabel: humanFileSize(stats.size),
+    clipCount: clips.length,
+    totalDuration,
+    encoderLabel: formatInfo.label,
+    pipelineLabel: `Audio export (${formatKey.toUpperCase()})`,
+  };
 }
 
 module.exports = {
@@ -1158,5 +1645,6 @@ module.exports = {
   preparePreviewMedia,
   probeMedia,
   runExport,
+  runAudioExport,
   summarizeExportSettings,
 };

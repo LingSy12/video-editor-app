@@ -7,3 +7,15 @@ pnpm-debug.log*
 # OS / editor
 .DS_Store
 Thumbs.db
+
+# Dependencies / build output
+node_modules/
+dist/
+
+# Claude Code local files
+.claude/
+
+# Subtitle engine local virtualenv + large vendored binaries
+subtitle-engine/.venv/
+subtitle-engine/vendor/downloads/
+**/__pycache__/
