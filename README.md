@@ -1,11 +1,14 @@
 # Cutline Studio
 
-Cutline Studio is a Windows desktop MVP for combining multiple source videos into one final video. It gives you a Premiere-style workspace with:
+Cutline Studio is a Windows desktop MVP for combining multiple source videos into one final video. Version 1.18 ships a redesigned docked dark workspace (single orange accent, hairline panel dividers) with:
 
-- Media bin for imported video files
-- Sequence timeline list with ordering controls
-- Millisecond trim and split-at-playhead editing
-- Timeline scrub preview with proxy playback
+- Slim toolbar with project open/save, undo/redo, and a top-right Export button
+- Tabbed left panel: media bin and subtitle tools (import / offline generate / export)
+- Program monitor with millisecond scrubbing and split-at-playhead editing
+- Multi-track timeline (video, subtitle, and audio tracks) with zoom and clip context menu
+- Inspector for trim points, speed, fades, and volume per clip
+- Status bar with timeline/proxy status and live hints
+- Bilingual UI (中文 / English) switchable at runtime
 - MP4 export with FFmpeg, GPU-preferred rendering, CUDA-assisted scaling when available, and bitrate presets
 - Output aspect presets including 16:9, 4:3, 2.35:1, 9:16, 3:4, 5.8-inch style, and 1:1
 
@@ -41,14 +44,19 @@ The intermediate `win-unpacked` folder is removed automatically after packaging 
 
 ## Features
 
-- Import multiple clips
+- Import multiple clips (file picker or drag-and-drop)
 - Automatically add newly imported clips to the sequence
 - Double-click clips to add extra copies to the sequence
 - Reorder clips in the sequence
-- Trim each clip by milliseconds
+- Trim each clip by milliseconds; adjust speed, fade in/out, and volume
 - Split the selected sequence clip at the current playhead
 - Scrub and play the full timeline across clip boundaries in the program monitor
+- Subtitle track: import `.srt` / `.vtt`, edit cues, drag cue position on the preview, export `.srt`
+- Generate subtitles fully offline with a bundled faster-whisper engine (CUDA or CPU)
+- Save and open projects, with media re-link on load and a recent-projects menu
+- Undo / redo for editing operations
 - Export the whole sequence as one MP4 with auto GPU preference or software fallback
+- Optional separate audio file export (M4A / MP3 / WAV)
 - Pick output aspect ratios like 16:9, 4:3, 2.35:1, 9:16, 3:4, 5.8-inch, 1:1, or custom width/height
 - Choose higher export bitrates and see estimated file size / render ETA during export
 - Automatically generate silent audio for clips that do not contain audio
