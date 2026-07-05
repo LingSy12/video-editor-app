@@ -2555,7 +2555,7 @@ function renderSequence() {
           <path d="M7 7V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/>
           <line x1="12" y1="11" x2="12" y2="13"/><line x1="12" y1="15" x2="12.01" y2="15"/>
         </svg>
-        <span>从媒体库添加片段到时间线</span>
+        <span><span class="lang-zh">从媒体库添加片段到时间线</span><span class="lang-en">Add clips from the media bin to the timeline</span></span>
       </div>`;
     return;
   }

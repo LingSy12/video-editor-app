@@ -9,63 +9,40 @@
   <body>
     <div class="app-shell">
       <header class="topbar">
-        <div class="brand">
-          <span class="brand-mark" aria-hidden="true">✂</span>
+        <div>
+          <p class="eyebrow">Desktop Video Editor · v1.17.2</p>
           <h1>Cutline Studio</h1>
         </div>
         <div class="topbar-actions">
-          <button id="openProjectButton" class="button button-icon" title="打开工程 / Open Project (Ctrl+O)">📂</button>
-          <button id="saveProjectButton" class="button button-icon" title="保存工程 / Save Project (Ctrl+S)">💾</button>
-          <button id="recentProjectsButton" class="button button-icon" title="最近打开的工程 / Recent projects">⏷</button>
-          <span class="toolbar-divider" aria-hidden="true"></span>
-          <button id="undoButton" class="button button-icon" title="撤销 / Undo (Ctrl+Z)" disabled>↶</button>
-          <button id="redoButton" class="button button-icon" title="重做 / Redo (Ctrl+Y / Ctrl+Shift+Z)" disabled>↷</button>
-        </div>
-        <div class="topbar-right">
           <select id="languageSelect" class="button lang-select" title="软件语言 / Language">
             <option value="zh">中文</option>
             <option value="en">English</option>
           </select>
-          <button id="openExportButton" class="button button-primary">
-            <span class="lang-zh">导出 …</span><span class="lang-en">Export …</span>
-          </button>
+          <button id="undoButton" class="button" title="撤销 / Undo (Ctrl+Z)" disabled>↶ <span class="lang-zh">撤销</span><span class="lang-en">Undo</span></button>
+          <button id="redoButton" class="button" title="重做 / Redo (Ctrl+Y / Ctrl+Shift+Z)" disabled>↷ <span class="lang-zh">重做</span><span class="lang-en">Redo</span></button>
+          <button id="openProjectButton" class="button" title="打开工程 / Open Project (Ctrl+O)">📂 <span class="lang-zh">打开</span><span class="lang-en">Open</span></button>
+          <button id="saveProjectButton" class="button" title="保存工程 / Save Project (Ctrl+S)">💾 <span class="lang-zh">保存</span><span class="lang-en">Save</span></button>
+          <button id="recentProjectsButton" class="button" title="最近打开的工程 / Recent projects">⏷</button>
+          <button id="importSubtitleButton" class="button" title="导入字幕 .srt / .vtt / Import subtitle file"><span class="lang-zh">字幕导入</span><span class="lang-en">Subs In</span></button>
+          <button id="generateSubtitleButton" class="button" title="本地离线生成字幕 / Local offline transcribe"><span class="lang-zh">字幕生成</span><span class="lang-en">Subs Gen</span></button>
+          <button id="exportSubtitleButton" class="button" title="字幕轨导出为 .srt / Export subtitle track"><span class="lang-zh">字幕导出</span><span class="lang-en">Subs Out</span></button>
+          <button id="importButton" class="button button-primary"><span class="lang-zh">导入视频</span><span class="lang-en">Import Videos</span></button>
+          <button id="appendButton" class="button"><span class="lang-zh">加入时间线</span><span class="lang-en">Add To Sequence</span></button>
         </div>
       </header>
 
       <main class="workspace">
         <section class="panel media-panel">
-          <div class="side-tabs" role="tablist">
-            <button type="button" class="side-tab active" data-tab="media" role="tab">
-              <span class="lang-zh">媒体</span><span class="lang-en">Media</span>
-            </button>
-            <button type="button" class="side-tab" data-tab="subtitles" role="tab">
-              <span class="lang-zh">字幕</span><span class="lang-en">Subtitles</span>
-            </button>
+          <div class="panel-header">
+            <div>
+              <p class="panel-kicker"><span class="lang-zh">工程</span><span class="lang-en">Project</span></p>
+              <h2><span class="lang-zh">媒体库</span><span class="lang-en">Media Bin</span></h2>
+            </div>
+            <span id="libraryCount" class="pill">0 clips</span>
           </div>
-
-          <div class="tab-body" data-tab-body="media">
-            <div class="button-row media-actions">
-              <button id="importButton" class="button button-primary"><span class="lang-zh">导入视频</span><span class="lang-en">Import Videos</span></button>
-              <button id="appendButton" class="button"><span class="lang-zh">加入时间线</span><span class="lang-en">Add To Sequence</span></button>
-            </div>
-            <div class="panel-subhead">
-              <span class="panel-kicker"><span class="lang-zh">媒体库</span><span class="lang-en">Media Bin</span></span>
-              <span id="libraryCount" class="pill">0 clips</span>
-            </div>
-            <div id="libraryList" class="library-list empty-state">
-              <span class="lang-zh">导入一些视频开始搭建序列。</span>
-              <span class="lang-en">Import a few source videos to begin building the sequence.</span>
-            </div>
-          </div>
-
-          <div class="tab-body hidden" data-tab-body="subtitles">
-            <p class="tab-hint">
-              <span class="lang-zh">导入、离线生成或导出时间线上的字幕轨。</span>
-              <span class="lang-en">Import, generate offline, or export the subtitle track.</span>
-            </p>
-            <button id="importSubtitleButton" class="button button-wide" title="导入字幕 .srt / .vtt / Import subtitle file"><span class="lang-zh">导入字幕 (.srt / .vtt)</span><span class="lang-en">Import Subtitles (.srt / .vtt)</span></button>
-            <button id="generateSubtitleButton" class="button button-wide" title="本地离线生成字幕 / Local offline transcribe"><span class="lang-zh">生成字幕 (本地离线)</span><span class="lang-en">Generate Subtitles (offline)</span></button>
-            <button id="exportSubtitleButton" class="button button-wide" title="字幕轨导出为 .srt / Export subtitle track"><span class="lang-zh">导出字幕 (.srt)</span><span class="lang-en">Export Subtitles (.srt)</span></button>
+          <div id="libraryList" class="library-list empty-state">
+            <span class="lang-zh">导入一些视频开始搭建序列。</span>
+            <span class="lang-en">Import a few source videos to begin building the sequence.</span>
           </div>
         </section>
 
@@ -87,8 +64,14 @@
             </div>
           </div>
           <div class="monitor-controls">
+            <div class="transport-row">
+              <button id="jumpStartButton" class="button"><span class="lang-zh">到开头</span><span class="lang-en">To Start</span></button>
+              <button id="playTimelineButton" class="button button-primary"><span class="lang-zh">播放时间线</span><span class="lang-en">Play Timeline</span></button>
+              <button id="jumpEndButton" class="button"><span class="lang-zh">到结尾</span><span class="lang-en">To End</span></button>
+              <button id="splitClipButton" class="button"><span class="lang-zh">在播放头切分</span><span class="lang-en">Split At Playhead</span></button>
+            </div>
             <div class="scrub-row">
-              <span id="timelineCurrentLabel" class="timecode accent">00:00.000</span>
+              <span id="timelineCurrentLabel" class="timecode">00:00.000</span>
               <input
                 id="timelineScrubber"
                 class="timeline-scrubber"
@@ -100,13 +83,14 @@
               />
               <span id="timelineTotalLabel" class="timecode">00:00.000</span>
             </div>
-            <div class="transport-row">
-              <button id="jumpStartButton" class="button" title="到开头 / To start">⏮ <span class="lang-zh">开头</span><span class="lang-en">Start</span></button>
-              <button id="playTimelineButton" class="button button-primary"><span class="lang-zh">播放时间线</span><span class="lang-en">Play Timeline</span></button>
-              <button id="jumpEndButton" class="button" title="到结尾 / To end">⏭ <span class="lang-zh">结尾</span><span class="lang-en">End</span></button>
-              <span class="toolbar-divider" aria-hidden="true"></span>
-              <button id="splitClipButton" class="button" title="在播放头切分 / Split at playhead">✂ <span class="lang-zh">切分</span><span class="lang-en">Split</span></button>
+            <div class="monitor-metadata">
+              <span id="activeSegmentLabel" class="badge"><span class="lang-zh">时间线未加载</span><span class="lang-en">Timeline not loaded</span></span>
+              <span id="proxyStatusLabel" class="badge cool"><span class="lang-zh">预览代理 空闲</span><span class="lang-en">Preview proxy idle</span></span>
             </div>
+          </div>
+          <div id="previewHint" class="preview-hint">
+            <span class="lang-zh">在媒体库或时间线里选一个片段开始预览。</span>
+            <span class="lang-en">Select a clip in the media bin or sequence to preview it here.</span>
           </div>
         </section>
 
@@ -252,7 +236,7 @@
           </div>
 
           <div class="inspector-group export-group">
-            <h3><span class="lang-zh">导出状态</span><span class="lang-en">Export Status</span></h3>
+            <h3><span class="lang-zh">导出</span><span class="lang-en">Export</span></h3>
             <div class="stack">
               <div class="metrics-row">
                 <div class="metric-card">
@@ -264,6 +248,9 @@
                   <strong id="estimatedDuration">00:00.000</strong>
                 </div>
               </div>
+              <button id="openExportButton" class="button button-primary button-wide">
+                <span class="lang-zh">导出 …</span><span class="lang-en">Export …</span>
+              </button>
               <div class="progress-block">
                 <div class="progress-track">
                   <div id="progressBar" class="progress-fill"></div>
@@ -297,16 +284,6 @@
           </div>
         </section>
       </main>
-
-      <footer class="statusbar">
-        <span id="activeSegmentLabel" class="badge"><span class="lang-zh">时间线未加载</span><span class="lang-en">Timeline not loaded</span></span>
-        <span id="proxyStatusLabel" class="badge cool"><span class="lang-zh">预览代理 空闲</span><span class="lang-en">Preview proxy idle</span></span>
-        <span id="previewHint" class="status-hint">
-          <span class="lang-zh">在媒体库或时间线里选一个片段开始预览。</span>
-          <span class="lang-en">Select a clip in the media bin or sequence to preview it here.</span>
-        </span>
-        <span class="status-version">v1.18.0</span>
-      </footer>
     </div>
 
     <!-- ── Export modal (剪映-style) ── -->
@@ -628,6 +605,5 @@
     </div>
 
     <script src="./renderer.js"></script>
-    <script src="./ui-shell.js"></script>
   </body>
 </html>

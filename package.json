@@ -1,6 +1,6 @@
 {
   "name": "video-editor-app",
-  "version": "1.17.2",
+  "version": "1.18.0",
   "description": "Desktop multi-clip video editor for combining and exporting videos as one file.",
   "main": "main.js",
   "scripts": {
